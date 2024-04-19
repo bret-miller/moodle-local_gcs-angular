@@ -128,12 +128,3 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-
-# Visual Studio
-/.vs
-.editorconfig
-*.vssscc
-
-# Angular fluff
-/.angular/cache
-/node_modules

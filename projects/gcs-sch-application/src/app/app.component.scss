@@ -1,0 +1,60 @@
+table {
+  width: 100%;
+}
+
+th.mat-sort-header-sorted {
+  color: black;
+}
+
+.mat-mdc-row .mat-mdc-cell {
+  border-bottom: 1px solid transparent;
+  border-top: 1px solid transparent;
+  cursor: pointer;
+}
+
+.mat-mdc-row:hover .mat-mdc-cell {
+  background-color: #f5f5f5;
+}
+
+.gcs-frm-grp {
+  padding-bottom: 1em;
+  width: 100%;
+}
+
+.gcs-lbl-hdr {
+  font-weight: bold;
+  font-size: x-small;
+}
+
+.gcs {
+  FONT-SIZE: 11pt;
+  COLOR: black;
+  FONT-FAMILY: Tahoma;
+  line-height: 1.2em;
+}
+
+.boxtbl td {
+  margin: 0;
+  padding: .3em;
+  vertical-align: top;
+  border: 1px solid black;
+  width: 100%;
+}
+
+.apptbl td {
+  border: none;
+  width: 1px;
+  white-space: nowrap;
+}
+
+.error {
+  COLOR: red;
+}
+
+.confirm {
+  COLOR: blue;
+}
+
+.bold {
+  font-weight: bold;
+}

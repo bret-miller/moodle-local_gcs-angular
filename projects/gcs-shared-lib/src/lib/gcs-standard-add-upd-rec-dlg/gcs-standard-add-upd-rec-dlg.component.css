@@ -1,0 +1,11 @@
+.ng-star-inserted {
+  float: left;
+  margin-right: 20px;
+}
+
+.gcs-newline {
+  clear: both;
+}
+.waiting {
+  cursor: wait;
+}

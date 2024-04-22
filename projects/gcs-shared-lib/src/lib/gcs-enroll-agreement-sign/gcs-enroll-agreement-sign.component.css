@@ -1,0 +1,19 @@
+.gcsagreementtext {
+  width: 100%; /* Set the width of the pre element */
+  font-size: 1.1em;
+  white-space: pre-wrap; /* CSS 3 */
+  white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+  white-space: -pre-wrap; /* Opera 4-6 */
+  white-space: -o-pre-wrap; /* Opera 7 */
+  word-wrap: break-word; /* Internet Explorer 5.5+ */
+  padding-bottom: 20px;
+}
+
+.gcsprinticon {
+  padding-right: 5px;
+  float: right;
+}
+
+.gcslogo {
+  display: none;
+}

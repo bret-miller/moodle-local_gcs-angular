@@ -1,0 +1,9 @@
+/* styles.css or your component's styles */
+.notification-dialog {
+  background-color: white;
+  padding: 16px;
+  text-align: center;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid black;
+}

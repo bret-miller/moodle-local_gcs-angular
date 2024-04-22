@@ -1,0 +1,65 @@
+<div class="edit-users mat-elevation-z8">
+  <mat-form-field *ngIf="listSel.show" style="padding-right:32px;" [style.width.px]="listSel.widthpx">
+    <mat-select #listSelCtl placeholder="Select {{listSel.placeholder}}..." (selectionChange)="getFullList()" [(ngModel)]="listSel.selected">
+      <mat-option *ngIf="listSel.filt.show">
+        <ngx-mat-select-search [formControl]="listSel.filt.ctl" placeholderLabel="Filter..."></ngx-mat-select-search>
+      </mat-option>
+      <mat-option *ngFor="let rec of listSel.displayList | async" [value]="rec.code">{{ rec.description }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Filter</mat-label>
+    <input matInput (keyup)="applyListFilter(input.value)" #input value="">
+  </mat-form-field>
+
+  <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
+    <ng-container [matColumnDef]="col.key" *ngFor="let col of tbldatasvc.coldefs">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header [disabled]="!col.issort" sortActionDescription="Sort by {{ col.colhdr }}">
+        <div [ngSwitch]="col.type">
+          <span *ngSwitchCase="'buttons'">
+            <button mat-icon-button color="primary" class="small-icon-button" (click)="onAddClick()" [disabled]="addmode">
+              <mat-icon>add</mat-icon>
+            </button>
+          </span>
+          <span *ngSwitchDefault>
+            {{ col.colhdr }}
+          </span>
+        </div>
+      </th>
+      <td mat-cell *matCellDef="let row" (click)="onRowClick(row, col)">
+        <div [ngSwitch]="col.type">
+
+          <div *ngSwitchCase="'buttons'" class="btn-edit">
+            <button mat-icon-button class="small-icon-button" color="warn" (click)="onDelClick(row)" matTooltip="Delete!">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <span *ngSwitchCase="'bool'">
+            <mat-checkbox [ngModel]="row[col.key]" [disabled]="true" />
+          </span>
+
+          <span *ngSwitchCase="'date'">
+            {{ row[col.key] | date: 'mediumDate' }}
+          </span>
+
+          <span *ngSwitchCase="'select'">
+            {{ codelistsdatasvc.getSelVal(col.sellist, row[col.key]) }}
+          </span>
+
+          <span *ngSwitchDefault>
+            {{ row[col.key] }}
+          </span>
+        </div>
+      </td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="tbldatasvc.displayedColumns; sticky:true;"></tr>
+    <tr mat-row *matRowDef="let row; columns: tbldatasvc.displayedColumns"></tr>
+
+    <!-- Row shown when there is no matching data. -->
+    <tr class="mat-row" *matNoDataRow>
+      <td class="mat-cell" colspan="2">No rows matching the filter "{{input.value}}"</td>
+    </tr>
+  </table>
+</div>

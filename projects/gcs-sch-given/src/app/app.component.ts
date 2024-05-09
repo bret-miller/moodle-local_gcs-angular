@@ -203,26 +203,44 @@ export class AppComponent {
 
   // click del, pop up delete confirm
   onDelClick(rec: any) {
-    if (confirm('Are you sure you want to delete ' + rec.termyear + '?')) {
-      // when Delete pressed, delete record
-      const bnr = this.gcsdatasvc.showNotification('Saving...', '');
-      this.tbldatasvc?.delrec(rec)?.subscribe(
-        // success
-        () => {
-          this.getFullList();
-        },
+    const bnr = this.gcsdatasvc.showNotification('Checking for dependencies...', '');
 
-        // error
-        (error) => {
-          console.error('Error:', error);
-        },
+    this.tbldatasvc.getdependencies(rec).subscribe(
+      // success
+      (dependencies) => {
+        if (dependencies.length > 0) {
+          this.gcsdatasvc.showNotification('This record cannot be deleted because it is used in another table.', '', 5000);
+        } else if (confirm('Are you sure you want to delete ' + rec.termyear + '?')) {
+          const bnr2 = this.gcsdatasvc.showNotification('Deleting...', '');
+          this.tbldatasvc?.delrec(rec)?.subscribe(
+            // success
+            () => {
+              this.getFullList();
+            },
 
-        // complete
-        () => {
-          bnr.close();
+            // error
+            (error) => {
+              console.error('Error:', error);
+            },
+
+            // complete
+            () => {
+              bnr2.close();
+            }
+          );
         }
-      );
-    }
+      },
+
+      // error
+      (error) => {
+        console.error('Error:', error);
+      },
+
+      // complete
+      () => {
+        bnr.close();
+      }
+    );
   }
 
   // open the Add/Update dialog
@@ -230,7 +248,7 @@ export class AppComponent {
     let dialogRef = this.dialog.open(GcsStandardAddUpdRecDlgComponent, {
       autoFocus: true,
       width: '950px',
-      height: '720px',
+      height: '670px',
       data: {
         title: 'Scholarships',// dialog title
         rec: rec,// record to edit

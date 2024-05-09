@@ -78,6 +78,11 @@ description string   //Description|val(required)|width=400px
     return this.gcsdatasvc.delrec('code_delete', rec);
   }
 
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'codeset.' + rec.codeset, keycsv: rec.code }, this.coldefs);
+  }
+
   /*
   +----------------------
   | Other public methods

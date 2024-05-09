@@ -27,13 +27,13 @@ elective int   //Elective|bool|nolist
 registrationdate int   //Registration Date|val(required)|date
 canceldate int   //Canceled|date
 completiondate int   //Completed|date
-tuitionpaid double   //Tuition paid|nolist|newline
-scholarshippedamount double   //Sch amt|nolist
-scholarshippedadjustment double   //Sch adj|nolist
-fee double   //Fee|nolist
-classtuition double   //Class Tuition|nolist
-ordertotal double   //Order total|nolist
-studentpaid double   //Student paid|nolist
+tuitionpaid double   //Tuition paid|nolist|show=hide
+classtuition double   //Class Tuition|nolist|newline|tooltip=Total class tuition amount
+studentpaid double   //Student paid|nolist|tooltip=Class tuition amount paid by student 
+scholarshippedamount double   //Sch amt|nolist|tooltip=Class tuition amount paid by scholarship
+scholarshippedadjustment double   //Sch adj|nolist|tooltip=Scholarship portion of a refund returned to the scholarship fund
+fee double   //Fee|nolist|tooltip=Non-tuition fee amount
+ordertotal double   //Order total|nolist|tooltip=Total revenue for the class (tuition + fee - refund)
 manualpricing int   //Manual pricing|bool|nolist
 comments string   //Comments|nolist|width=600px|text
 shorttitleoverride string   //Short title Override|nolist|width=320px|newline
@@ -104,6 +104,11 @@ regfoxcode string   //RegFox code|nolist
     return this.gcsdatasvc.delrec('classes_taken_delete', rec);
   }
 
+  // get list of table record dependencies
+  //getdependencies(rec: any) {
+  //  return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'classtaken', keycsv: rec.termyear + ',' + rec.termcode + ',' + rec.coursecode }, this.coldefs);
+  //}
+
   // get student's class list
   getfilteredstulist(stuid: string, inclCurrentlyEnrolled: boolean = true, inclPass: boolean = true, inclFail: boolean = true, inclAudits: boolean = false, inclCanceled: boolean = false) {
     return this.getlistbystuid(stuid).pipe(map(list => {
@@ -166,6 +171,14 @@ regfoxcode string   //RegFox code|nolist
   addColDef(coldef: columnSchema) {
     this.coldefs.push(coldef);
     this.displayedColumns = this.gcsdatasvc.getDisplayedCols(this.coldefs);
+  }
+
+  buildKey(rec: any) {
+    return rec.studentid + '-' + rec.termyear + '-' + rec.termcode + '-' + rec.coursecode;
+  }
+
+  buildDesc(rec: any) {
+    return rec.coursecode + ' - ' + rec.shorttitle;
   }
 }
 

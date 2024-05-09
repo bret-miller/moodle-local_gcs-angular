@@ -69,6 +69,11 @@ agreement string   //Agreement Text|nolist|html|width=900px|newline|val(required
     return this.gcsdatasvc.delrec('enrollment_agreements_delete', rec);
   }
 
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'enrollmentagreement', keycsv: rec.id }, this.coldefs);
+  }
+
   /*
   +----------------------
   | Other public methods

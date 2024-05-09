@@ -79,9 +79,11 @@ export class GcsStandardAddUpdRecDlgComponent {
     this.valRec();
   }
 
-  // required for standard dialog html (leave empty if not needed)
-  onSelChanged(rec: any, colkey: string) {
-    this.valRec();
+  onValChanged(rec: any, colkey: string) {
+    // table-specific event handler
+    if (this.dlgDataIn.tbldatasvc.onValChanged) this.dlgDataIn.tbldatasvc.onValChanged(rec, colkey, this.coldefs);
+    
+    this.valRec();// always revalidate when a field value changes
   }
 
   onCancelClick(): void {

@@ -81,6 +81,11 @@ comments string   //Comments|nolist|width=520px|text|newline
     return this.gcsdatasvc.delrec('class_delete', rec);
   }
 
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'class', keycsv: rec.termyear + ',' + rec.termcode + ',' + rec.coursecode }, this.coldefs);
+  }
+
   /*
   +----------------------
   | Other public methods
@@ -96,6 +101,31 @@ comments string   //Comments|nolist|width=520px|text|newline
     let a = this.gcsdatasvc.initRec(this.coldefs);
     a.termyear = new Date().getFullYear();
     return a;
+  }
+
+  onValChanged(rec: any, colkey: string) {
+    // init record from the course record for empty fields
+    if (colkey === 'coursecode') {
+      // let them know we're filling in some fields
+      let bnr = this.gcsdatasvc.showNotification('Filling in some fields from the course record.', '');
+
+      // subscribe to the course record
+      this.codelistsdatasvc.crsdatasvc.getrecbycode(rec.coursecode).subscribe((crsrec: any) => {
+        bnr.close();
+        if (crsrec) {
+          // fill in the fields
+          if (!rec.shorttitle) rec.shorttitle = crsrec.shorttitle;
+          if (!rec.title) rec.title = crsrec.title;
+          if (!rec.description) rec.description = crsrec.description;
+          if (!rec.coursehours) rec.coursehours = crsrec.coursehours;
+          if (!rec.lectures) rec.lectures = crsrec.lectures;
+          if (!rec.instructor) rec.instructor = parseInt(crsrec.defaultinstructor);
+          if (!rec.requiredtextbooks) rec.requiredtextbooks = crsrec.requiredtextbooks;
+
+          this.valRec(rec, this.coldefs);
+        }
+      });
+    }
   }
 
   valRec(rec: any, coldefs: columnSchema[]) {
@@ -126,7 +156,7 @@ comments string   //Comments|nolist|width=520px|text|newline
   }
 
   buildKey(rec: any) {
-    return rec.termyear + '-' + rec.termcode + '-' + rec.coursecode;
+    return rec.termyear + '-' + this.codelistsdatasvc.getSelVal('codeset_term', rec.termcode) + '-' + rec.coursecode;
   }
 
   buildDesc(rec: any) {

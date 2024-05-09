@@ -251,11 +251,48 @@ export class AppComponent {
 
   // click del, pop up delete confirm
   onDelClick(rec: any) {
-    if (rec && this.tbldatasvc && confirm('Are you sure you want to delete ' + rec.description + '?')) {
+    // no need to check for dependencies when record is blank
+		if (!rec.code && !rec.description) {
+			this.confirmAndDelete(rec);
+			return;
+		}
+
+    // check for dependencies
+    const bnr = this.gcsdatasvc.showNotification('Checking for dependencies...', '');
+
+    this.tbldatasvc.getdependencies(rec).subscribe(
+      // success
+      (dependencies) => {
+        if (dependencies.length > 0) {
+          //let msg = 'This record is used in the following tables: \n';
+          //for (let i = 0; i < dependencies.length; i++) {
+          //  msg += dependencies[i].tablename + '\n';
+          //}
+          //msg += 'You must remove these dependencies before you can delete this record.';
+          this.gcsdatasvc.showNotification('This record cannot be deleted because it is used in another table.', '', 5000);
+        } else {
+          this.confirmAndDelete(rec);
+          this.disablebuttons = false;
+        }
+      },
+
+      // error
+      (error) => {
+        console.error('Error:', error);
+      },
+
+      // complete
+      () => {
+        bnr.close();
+      }
+    );
+  }
+
+  private confirmAndDelete(rec: any) {
+    if (rec && this.tbldatasvc && confirm('Are you sure you want to delete ' + rec.codeset + '.' + rec.code + ' (' + rec.description + ')?')) {
       rec.isEdit = false;
       rec.isAdd = false;
-      // when Delete pressed, delete record
-      const bnr = this.gcsdatasvc.showNotification('Saving...', '');
+      const bnr2 = this.gcsdatasvc.showNotification('Deleting...', '');
       this.tbldatasvc?.delrec(rec)?.subscribe(
         // success
         () => {
@@ -269,11 +306,10 @@ export class AppComponent {
 
         // complete
         () => {
-          bnr.close();
+          bnr2.close();
         }
       );
     }
-    this.disablebuttons = false;
   }
 
   hasChanges(rec: any) {

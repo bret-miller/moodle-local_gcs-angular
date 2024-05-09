@@ -88,6 +88,11 @@ applythru int   //Apply thru|date|nolist|val(required)
     return this.gcsdatasvc.delrec('sch_available_delete', rec);
   }
 
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'scholarship', keycsv: rec.scholarshipcode }, this.coldefs);
+  }
+
   /*
   +----------------------
   | Other public methods

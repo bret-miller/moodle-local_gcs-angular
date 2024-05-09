@@ -21,7 +21,7 @@ legalmiddlename string   //Legal Middle Name|nolist|width=200px
 preferredfirstname string   //Preferred First Name|nolist|width=200px
 programcode string   //Program|val(required)|sel(tbl,program)|width=350px|newline
 statuscode string   //Status|val(required)|sel(codeset,status)|width=200px
-scholarshipeligible string   //Scholarship Eligible|nolist|width=250px|sel(codeset,scholarship)_category
+scholarshipeligible string   //Scholarship Eligible|nolist|width=250px|sel(codeset,scholarship_category)
 isgraduated int   //Is Graduated?|bool
 donotemail int   //Do Not Email|bool|nolist
 acceptancedate int   //Acceptance Date|date
@@ -110,6 +110,11 @@ regfoxemails string   //Regfox Emails (comma-separated)|nolist|width=550px
   // delete record (no checking is done here to prevent deleting a record used in another table.  this should be done by caller)
   delrec(rec: any) {
     return this.gcsdatasvc.delrec('students_delete', rec);
+  }
+
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'student', keycsv: rec.id }, this.coldefs);
   }
 
   /*

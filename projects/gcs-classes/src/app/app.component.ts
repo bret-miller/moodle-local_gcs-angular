@@ -88,8 +88,8 @@ export class AppComponent {
         list.sort((t1, t2) => {
           if (t1.termyear > t2.termyear) { return -1; }
           if (t1.termyear < t2.termyear) { return 1; }
-          if (t1.termcode > t2.termcode) { return 1; }
-          if (t1.termcode < t2.termcode) { return -1; }
+          if (t1.termcode > t2.termcode) { return -1; }
+          if (t1.termcode < t2.termcode) { return 1; }
           if (t1.coursecode > t2.coursecode) { return 1; }
           if (t1.coursecode < t2.coursecode) { return -1; }
           return 0;
@@ -135,26 +135,44 @@ export class AppComponent {
 
   // click del, pop up delete confirm
   onDelClick(rec: any) {
-    if (confirm('Are you sure you want to delete ' + rec.termyear + '-' + this.codelistsdatasvc.getSelVal('codeset_term', rec.termcode) + '-' + rec.coursecode + '?')) {
-      // when Delete pressed, delete record
-      const bnr = this.gcsdatasvc.showNotification('Saving...', '');
-      this.tbldatasvc?.delrec(rec)?.subscribe(
-        // success
-        () => {
-          this.getFullList();
-        },
+    const bnr = this.gcsdatasvc.showNotification('Checking for dependencies...', '');
 
-        // error
-        (error) => {
-          console.error('Error:', error);
-        },
+    this.tbldatasvc.getdependencies(rec).subscribe(
+      // success
+      (dependencies) => {
+        if (dependencies.length > 0) {
+          this.gcsdatasvc.showNotification('This record cannot be deleted because it is used in another table.', '', 5000);
+        } else if (confirm('Are you sure you want to delete ' + this.tbldatasvc.buildKey(rec) + '?')) {
+          const bnr2 = this.gcsdatasvc.showNotification('Deleting...', '');
+          this.tbldatasvc?.delrec(rec)?.subscribe(
+            // success
+            () => {
+              this.getFullList();
+            },
 
-        // complete
-        () => {
-          bnr.close();
+            // error
+            (error) => {
+              console.error('Error:', error);
+            },
+
+            // complete
+            () => {
+              bnr2.close();
+            }
+          );
         }
-      );
-    }
+      },
+
+      // error
+      (error) => {
+        console.error('Error:', error);
+      },
+
+      // complete
+      () => {
+        bnr.close();
+      }
+    );
   }
 
   // open the Add/Update dialog

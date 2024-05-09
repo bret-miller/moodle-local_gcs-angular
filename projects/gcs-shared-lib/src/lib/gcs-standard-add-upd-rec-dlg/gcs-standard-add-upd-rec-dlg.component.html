@@ -15,7 +15,7 @@
                placeholder="{{dlgDataOut.rec[col.key] ? col.colhdr : '(none)'}}"
                [disabled]="col.show==='readonly'"
                [(ngModel)]="dlgDataOut.rec[col.key]"
-               (change)="valRec()"
+               (change)="onValChanged(dlgDataOut.rec, col.key)"
                matTooltip="{{col.tooltip}}"
         />
         <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
@@ -38,7 +38,7 @@
                [disabled]="col.show==='readonly'"
                (ngModelChange)="dlgDataOut.rec[col.key] = $event"
                [(ngModel)]="dlgDataOut.rec[col.key]"
-               (change)="valRec()"
+               (change)="onValChanged(dlgDataOut.rec, col.key)"
                matTooltip="{{col.tooltip}}"
         />
         <button *ngIf="col.popupid==='enrollagreement'"
@@ -59,7 +59,7 @@
                   placeholder="{{col.colhdr}}"
                   (ngModelChange)="triggerResize()"
                   [disabled]="col.show==='readonly'"
-                  (change)="valRec()"
+                  (change)="onValChanged(dlgDataOut.rec, col.key)"
                   cdkTextareaAutosize
                   cdkAutosizeMinRows="1"
                   cdkAutosizeMaxRows=“6”
@@ -74,7 +74,7 @@
         <mat-label>{{col.colhdr}}</mat-label>
         <mat-select [(ngModel)]="dlgDataOut.rec[col.key]"
                     [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-                    (selectionChange)="onSelChanged(dlgDataOut.rec, col.key)"
+                    (selectionChange)="onValChanged(dlgDataOut.rec, col.key)"
                     [disabled]="col.show==='readonly'"
                     matTooltip="{{col.tooltip}}"
         >
@@ -91,7 +91,7 @@
                [(ngModel)]="dlgDataOut.rec[col.key]"
                placeholder="{{col.colhdr}}"
                [disabled]="col.show==='readonly'"
-               (change)="valRec()"
+               (change)="onValChanged(dlgDataOut.rec, col.key)"
                matTooltip="{{col.tooltip}}" />
         <mat-hint style="color:red">{{col.errmsg}}</mat-hint>
       </mat-form-field>

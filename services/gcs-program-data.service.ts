@@ -75,6 +75,11 @@ inactive int   //Inactive?|bool
     return this.gcsdatasvc.delrec('program_delete', rec);
   }
 
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'program', keycsv: rec.programcode }, this.coldefs);
+  }
+
   /*
   +----------------------
   | Other public methods
@@ -122,7 +127,7 @@ inactive int   //Inactive?|bool
   }
 
   buildDesc(rec: any) {
-    return rec.description;
+    return rec.title;
   }
 }
 

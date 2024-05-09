@@ -87,8 +87,8 @@ export class AppComponent {
         list.sort((t1, t2) => {
           if (t1.termyear > t2.termyear) { return -1; }
           if (t1.termyear < t2.termyear) { return 1; }
-          if (t1.termcode > t2.termcode) { return 1; }
-          if (t1.termcode < t2.termcode) { return -1; }
+          if (t1.termcode > t2.termcode) { return -1; }
+          if (t1.termcode < t2.termcode) { return 1; }
           return 0;
         });
         this.dblist = list;
@@ -185,8 +185,8 @@ export class AppComponent {
   openDialog(rec: any) {
     let dialogRef = this.dialog.open(GcsStandardAddUpdRecDlgComponent, {
       autoFocus: true,
-      width: '40%',
-      height: '60%',
+      width: '640px',
+      height: '600px',
       data: {
         title: 'Term Dates',// dialog title
         rec: rec,// record to edit

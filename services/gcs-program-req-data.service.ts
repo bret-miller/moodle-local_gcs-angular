@@ -74,6 +74,11 @@ reportseq int   //Report Seq|val(required)
     return this.gcsdatasvc.delrec('programreq_delete', rec);
   }
 
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'programreq', keycsv: rec.programcode + ',' + rec.categorycode }, this.coldefs);
+  }
+
   /*
   +----------------------
   | Other public methods

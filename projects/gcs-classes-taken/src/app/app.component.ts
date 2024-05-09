@@ -100,8 +100,8 @@ export class AppComponent {
         list.sort((t1, t2) => {
           if (t1.termyear > t2.termyear) { return -1; }
           if (t1.termyear < t2.termyear) { return 1; }
-          if (t1.termcode > t2.termcode) { return 1; }
-          if (t1.termcode < t2.termcode) { return -1; }
+          if (t1.termcode > t2.termcode) { return -1; }
+          if (t1.termcode < t2.termcode) { return 1; }
           if (t1.coursecode > t2.coursecode) { return 1; }
           if (t1.coursecode < t2.coursecode) { return -1; }
           return 0;
@@ -153,7 +153,9 @@ export class AppComponent {
 
   // click del, pop up delete confirm
   onDelClick(rec: any) {
-    if (confirm('Are you sure you want to delete ' + this.codelistsdatasvc.getSelVal('tbl_course', rec.coursecode) + '?')) {
+    if (rec.completiondate || rec.gradecode) {
+      this.gcsdatasvc.showNotification('This class shows that it has been completed or given a grade.  To delete it, you must first remove the Grade and Completed date.', '', 5000);
+    } else if (confirm('Are you sure you want to delete ' + this.codelistsdatasvc.getSelVal('tbl_course', rec.coursecode) + '?')) {
       // when Delete pressed, delete record
       const bnr = this.gcsdatasvc.showNotification('Saving...', '');
       this.tbldatasvc?.delrec(rec)?.subscribe(

@@ -23,7 +23,7 @@ export class GcsCodelistsDataService {
     private codetbldatasvc: GcsCodeDataService,
     private pgmdatasvc: GcsProgramDataService,
     private studatasvc: GcsStudentDataService,
-    private crsdatasvc: GcsCoursesDataService,
+    public crsdatasvc: GcsCoursesDataService,// needed by gcs-classes-data.service
     private schdatasvc: GcsSchAvailableDataService,
     private userdatasvc: MdlUserDataService,
   ) {
@@ -131,7 +131,6 @@ export class GcsCodelistsDataService {
       return ret;
     }));
   }
-
 
   // build a code list and lookup dictionary
   addCodeList(sellist: string, list: any[], svc: any) {

@@ -64,6 +64,11 @@ comments string   //Comments|nolist|width=520px|text|newline
     return this.gcsdatasvc.getrec('course_get', { id }, this.coldefs);
   }
 
+  // read specific record from server
+  getrecbycode(coursecode: string) {
+    return this.gcsdatasvc.getrec('course_get_by_coursecode', { coursecode }, this.coldefs);
+  }
+
   // update specific record
   updrec(rec: any) {
     return this.gcsdatasvc.updrec('course_update', rec, this.coldefs);
@@ -77,6 +82,11 @@ comments string   //Comments|nolist|width=520px|text|newline
   // delete record (no checking is done here to prevent deleting a record used in another table.  this should be done by caller)
   delrec(rec: any) {
     return this.gcsdatasvc.delrec('course_delete', rec);
+  }
+
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'course', keycsv: rec.coursecode }, this.coldefs);
   }
 
   /*

@@ -125,6 +125,11 @@ comments string   //Comments|nolist|width=520px|text|newline
     return this.gcsdatasvc.addrec('sch_given_insert', rec, this.coldefs);
   }
 
+  // get list of table record dependencies
+  getdependencies(rec: any) {
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'scholarshipgiven', keycsv: rec.id }, this.coldefs);
+  }
+
   /*
   +----------------------
   | Other public methods

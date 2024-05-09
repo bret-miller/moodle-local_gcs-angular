@@ -73,6 +73,7 @@ export class columnSchema {
 
   // properties common to all modes
   public key: string = '';// table record field name
+  public dbtype: string = '';// db data type: int, string
   public type: string = '';// how to display: int, bool, date, text, select, popup, buttons
   public colhdr: string = '';// column header text
   public widthval: string = '120';// optional but for now, always treated as px
@@ -171,7 +172,7 @@ export class GcsDataService {
 
   // add new record
   addrec(func: string, rec: any, coldefs: columnSchema[]) {
-    if (!rec || rec.id > 0) return;// id muust not be present
+    if (!rec || rec.id > 0) return;// id must not be present
     return this.dbupdrec(func, rec, coldefs);
   }
 
@@ -358,17 +359,22 @@ public void getUsersByField(String token, String domainName, String functionName
   private jstomdl(rec: any, coldefs: columnSchema[]) {
     // convert js to moodle
     coldefs.forEach(coldef => {
-      switch (coldef.type) {
-        // convert date fields
-        case 'date': {
-          if (rec[coldef.key] instanceof Date) {
-            let dt = new Date(rec[coldef.key].toString().substr(0, 24) + 'Z');// adjust to UTC
-            rec[coldef.key] = Math.floor(dt.getTime() / 1000);// convert from javascript date to unix timestamp
-          } else {
-            rec[coldef.key] = null;
-          }
-          break;
+      if (coldef.type === 'date') {
+        if (rec[coldef.key] instanceof Date) {
+          let dt = new Date(rec[coldef.key].toString().substr(0, 24) + 'Z');// adjust to UTC
+          rec[coldef.key] = Math.floor(dt.getTime() / 1000);// convert from javascript date to unix timestamp
         }
+      } else if (coldef.type === 'bool') {
+        rec[coldef.key] = rec[coldef.key] ? 1 : 0;
+      }
+
+      // assure correct db data type
+      if (coldef.dbtype === 'string') {
+        if (rec[coldef.key] !== null) {
+          rec[coldef.key] = rec[coldef.key].toString();
+        }
+      } else if (coldef.dbtype === 'int') {
+        rec[coldef.key] = parseInt(rec[coldef.key]);
       }
 
       // check for html fields
@@ -423,7 +429,8 @@ public void getUsersByField(String token, String domainName, String functionName
           // key & type
           if (keytypear.length >= 2) {
             item.key = keytypear[0];
-            item.type = keytypear[1];
+            item.dbtype = keytypear[1];
+            item.type = item.dbtype;// set default but may be changed below
 
             // split out partitioned comment items
             let commentar = ar[1].split('|');
@@ -449,26 +456,26 @@ public void getUsersByField(String token, String domainName, String functionName
                     break;
                   }
                   case 'bool': {
-                    if (item.type === 'int') {
+                    if (item.dbtype === 'int') {
                       item.type = 'bool';
                     }
                     break;
                   }
                   case 'date': {
-                    if (item.type === 'int') {
+                    if (item.dbtype === 'int') {
                       item.type = 'date';
                       item.widthval = '160';// date field dft is wider
                     }
                     break;
                   }
                   case 'text': {
-                    if (item.type === 'string') {
+                    if (item.dbtype === 'string') {
                       item.type = 'text';
                     }
                     break;
                   }
                   case 'html': {
-                    if (item.type === 'string') {
+                    if (item.dbtype === 'string') {
                       item.type = 'text';// handled in ui just like text.
                       item.ishtml = true;  // this designator is for fields that contain html tags where moodle needs it escaped(see mdltojs)
                     }

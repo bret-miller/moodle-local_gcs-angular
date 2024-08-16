@@ -14,9 +14,9 @@
   </mat-form-field>
 
   <table mat-table [dataSource]="dataSource" matSort (matSortChange)="announceSortChange($event)" class="mat-elevation-z8">
-    <ng-container [matColumnDef]="col.key" *ngFor="let col of tbldatasvc.coldefs">
+    <ng-container [matColumnDef]="col.fieldname" *ngFor="let col of tbldatasvc.coldefs()">
       <th mat-header-cell *matHeaderCellDef mat-sort-header [disabled]="!col.issort">
-        <div [ngSwitch]="col.type">
+        <div [ngSwitch]="col.datatype">
           <span *ngSwitchCase="'buttons'">
             <button mat-icon-button color="primary" class="small-icon-button" (click)="onAddClick()" [disabled]="disablebuttons">
               <mat-icon>add</mat-icon>
@@ -28,7 +28,7 @@
         </div>
       </th>
       <td mat-cell *matCellDef="let row">
-        <div [ngSwitch]="col.type" *ngIf="!row.isEdit">
+        <div [ngSwitch]="col.datatype" *ngIf="!row.isEdit">
           <div class="btn-edit" *ngSwitchCase="'buttons'">
             <button mat-icon-button class="small-icon-button" color="primary" matTooltip="Edit" (click)="onEditClick(row)">
               <mat-icon>edit</mat-icon>
@@ -39,14 +39,14 @@
           </div>
 
           <span *ngSwitchCase="'date'">
-            {{ row[col.key] | date: 'mediumDate' }}
+            {{ row[col.fieldname] | date: 'mediumDate' }}
           </span>
           <span *ngSwitchDefault>
-            {{ row[col.key] }}
+            {{ row[col.fieldname] }}
           </span>
         </div>
 
-        <div [ngSwitch]="col.type" *ngIf="row.isEdit">
+        <div [ngSwitch]="col.datatype" *ngIf="row.isEdit">
 
           <div *ngSwitchCase="'buttons'" class="btn-edit">
             <button mat-icon-button color="primary" class="small-icon-button" (click)="onSaveClick(row)" [disabled]="!hasChanges(row)" matTooltip="Save">
@@ -63,7 +63,7 @@
             <input matInput
                    [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
                    [matDatepicker]="picker"
-                   [(ngModel)]="row[col.key]"
+                   [(ngModel)]="row[col.fieldname]"
                    (change)="valRec(row)" />
             <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
             <mat-datepicker #picker></mat-datepicker>
@@ -73,8 +73,8 @@
           <mat-form-field *ngSwitchCase="'bool'" class="form-input">
             <mat-checkbox
                           [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-                          [ngModel]="row[col.key]"
-                          (change)="row[col.key] = $event.checked"
+                          [ngModel]="row[col.fieldname]"
+                          (change)="row[col.fieldname] = $event.checked"
             ></mat-checkbox>
           </mat-form-field>
 
@@ -82,17 +82,17 @@
             <input type="number"
                    matInput
                    [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-                   (ngModelChange)="row[col.key] = $event"
-                   [ngModel]="row[col.key]"
+                   (ngModelChange)="row[col.fieldname] = $event"
+                   [ngModel]="row[col.fieldname]"
                    (change)="valRec(row)" />
             <mat-hint style="color:red">{{col.errmsg}}</mat-hint>
           </mat-form-field>
 
           <mat-form-field *ngSwitchDefault class="form-input">
-            <input [type]="col.type"
+            <input [type]="col.datatype"
                    matInput
                    [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-                   [(ngModel)]="row[col.key]"
+                   [(ngModel)]="row[col.fieldname]"
                    (change)="valRec(row)" />
             <mat-hint style="color:red">{{col.errmsg}}</mat-hint>
           </mat-form-field>

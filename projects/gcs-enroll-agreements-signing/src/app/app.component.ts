@@ -4,11 +4,15 @@ import { GcsClassesTakenDataService } from 'services/gcs-classes-taken-data.serv
 import { FormControl } from '@angular/forms';
 import { Observable, map, startWith } from 'rxjs';
 import { GcsDataService } from 'services/gcs-data.service';
+import { MAT_DIALOG_DEFAULT_OPTIONS } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  providers: [
+    { provide: MAT_DIALOG_DEFAULT_OPTIONS, useValue: { hasBackdrop: true } }
+  ]
 })
 export class AppComponent {
   showDropDown = false;// dropdown visibility
@@ -50,12 +54,12 @@ export class AppComponent {
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
 
     // get the list of students with unsigned agreements (service will only return the logged-in person's record because they're only allowed to see their own info)
-    this.studatasvc.getlistunsignedenrollmentagreements().subscribe(
+    this.studatasvc.getlistunsignedenrollmentagreements().subscribe({
       // Admin - (0 or more records can be returned representing all unsigned agreements for the current term) display and load dropdown of these students 
       // Non-Admin - (always 1 record returned even if no unsigned agreements) dropdown is hidden but their unsigned agreements are displayed
 
       // success
-      stulist => {
+      next: stulist => {
         this.showDropDown = true;// make the dropdown visible
         // when one record is returned, hide the dropdown and just show the unsigned agreements
         if (stulist.length === 1) {
@@ -86,16 +90,16 @@ export class AppComponent {
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
         this.listSelCtl.open();// present an open dropdown
       }
-    );
+    });
   }
 
   fillScreen(stuid: string) {
@@ -107,14 +111,14 @@ export class AppComponent {
     this.banner = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
 
     // get the student record and all unsigned screen records
-    this.studatasvc.getrecbyid(stuid).subscribe(
+    this.studatasvc.getrecbyid(stuid).subscribe({
       // success
-      stulist => {
+      next: stulist => {
         // allow only single record
         if (stulist.length === 1) {
-          this.classestakendatasvc.getlistunsignedbystuid(stuid).subscribe(
+          this.classestakendatasvc.getlistunsignedbystuid(stuid).subscribe({
             // success
-            unsignedlist => {
+            next: unsignedlist => {
               // init temp flags in the list
               unsignedlist.forEach(r => {
                 r.elective = false;// model used for the checkbox
@@ -126,18 +130,18 @@ export class AppComponent {
             },
 
             // error
-            (error) => {
+            error: (error) => {
               console.error('Error:', error);
             },
-          );
+          });
         }
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       },
-    );
+    });
   }
 
   onAgreementsLoaded() {

@@ -1,111 +1,341 @@
-<h2 mat-dialog-title>{{(dlgDataOut.isAdd ? 'Add' : 'Update')}} {{dlgDataIn.title}}</h2>
+<h2 mat-dialog-title [ngStyle]="{'background-color': configmode||dlgDataIn.tbldatasvc.tableid==='flddef' ? 'antiquewhite' : 'white'}">{{(dlgDataOut.isAdd ? 'Add' : 'Update')}} {{dlgDataIn.title}}</h2>
 
-<mat-dialog-content class="mat-typography" style="max-height: 80vh;" fxLayout="row wrap" fxLayoutGap="16px">
-  <ng-container *ngFor="let col of coldefs">
-    <!-- Field input controls -->
-    <div [ngSwitch]="col.type" *ngIf="col.show!=='hide'"
-         [ngClass]="{'gcs-newline': col.isnewline}"
-         style="padding-top:10px;">
+<mat-dialog-content class="mat-typography drag-container" style="max-height: 80vh;" fxLayout="row wrap" fxLayoutGap="16px">
+	<!-- NOT in config mode (angular does not support condiional directives, so to customize for config mode we duplicate the code, one modified for config, one not) -->
+	<div *ngIf="!configmode">
+		<!-- Field input container (each is a drop zone for moving fields around, identified by the FldDef id) -->
+		<ng-container *ngFor="let fld of flddefs; let i = index;">
+			<div *ngIf="fld.isvisible"
+					 [ngSwitch]="fld.datatype"
+					 [ngClass]="{'gcs-newline': fld.isnewline}"
+					 style="padding-top:10px;margin-right: 20px;">
 
-      <mat-form-field *ngSwitchCase="'date'" class="form-input" appearance="outline" [style.width.px]="col.widthval" fxFlex>
-        <mat-label>{{col.colhdr}}</mat-label>
-        <input matInput
-               [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-               [matDatepicker]="picker"
-               placeholder="{{dlgDataOut.rec[col.key] ? col.colhdr : '(none)'}}"
-               [disabled]="col.show==='readonly'"
-               [(ngModel)]="dlgDataOut.rec[col.key]"
-               (change)="onValChanged(dlgDataOut.rec, col.key)"
-               matTooltip="{{col.tooltip}}"
-        />
-        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-datepicker #picker></mat-datepicker>
-        <mat-hint style="color:red">{{col.errmsg}}</mat-hint>
-      </mat-form-field>
+				<mat-form-field *ngSwitchCase="'date'" class="form-input" appearance="outline" [style.width.px]="fld.widthval">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<input matInput
+								 [ngStyle]="{'background-color': fld.haschanges ? 'lightgreen' : 'inherit'}"
+								 [matDatepicker]="picker"
+								 placeholder="{{dlgDataOut.rec[fld.fieldname] ? fld.colhdr : '(none)'}}"
+								 [disabled]="fld.show==='readonly'"
+								 [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+								 (change)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+								 matTooltip="{{tooltip(fld)}}" />
+					<mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+					<mat-datepicker #picker></mat-datepicker>
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
 
-      <mat-checkbox *ngSwitchCase="'bool'"
-                    [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-                    [(ngModel)]="dlgDataOut.rec[col.key]"
-                    [disabled]="col.show==='readonly'"
-                    matTooltip="{{col.tooltip}}"
-      >{{col.colhdr}}</mat-checkbox>
+				<div *ngSwitchCase="'bool'" class="form-input"
+						 [ngStyle]="{'background-color': fld.haschanges ? 'lightgreen' : 'inherit'}"
+						 style="padding:10px">
+					<mat-checkbox [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+												[disabled]="fld.show==='readonly'"
+												matTooltip="{{tooltip(fld)}}">{{fld.colhdr}}</mat-checkbox>
+				</div>
 
-      <mat-form-field *ngSwitchCase="'int'" class="form-input" appearance="outline" [style.width.px]="col.widthval" fxFlex>
-        <mat-label>{{col.colhdr}}</mat-label>
-        <input type="number" placeholder="{{col.colhdr}}"
-               matInput
-               [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-               [disabled]="col.show==='readonly'"
-               (ngModelChange)="dlgDataOut.rec[col.key] = $event"
-               [(ngModel)]="dlgDataOut.rec[col.key]"
-               (change)="onValChanged(dlgDataOut.rec, col.key)"
-               matTooltip="{{col.tooltip}}"
-        />
-        <button *ngIf="col.popupid==='enrollagreement'"
-                mat-icon-button
-                matSuffix
-                class="small-icon-button"
-                matTooltip="View Enrollment Agreement"
-                (click)="openEnrollAgreementDialog()">
-          <mat-icon>assignment_turned_in</mat-icon>
-        </button>
-        <mat-hint style="color:red">{{col.errmsg}}</mat-hint>
-      </mat-form-field>
+				<mat-form-field *ngSwitchCase="'int'" class="form-input" appearance="outline" [style.width.px]="fld.widthval">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<input type="number" placeholder="{{fld.colhdr}}"
+								 matInput
+								 [ngStyle]="{'background-color': fld.haschanges ? 'lightgreen' : 'inherit'}"
+								 [disabled]="fld.show==='readonly'"
+								 (ngModelChange)="dlgDataOut.rec[fld.fieldname] = $event"
+								 [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+								 (change)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+								 matTooltip="{{tooltip(fld)}}" />
+					<button *ngIf="fld.popupid==='enrollagreement'"
+									mat-icon-button
+									matSuffix
+									class="small-icon-button"
+									matTooltip="View Enrollment Agreement"
+									(click)="openEnrollAgreementDialog()">
+						<mat-icon>assignment_turned_in</mat-icon>
+					</button>
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
 
-      <mat-form-field *ngSwitchCase="'text'" appearance="outline" [style.width.px]="col.widthval" fxFlex>
-        <mat-label>{{col.colhdr}}</mat-label>
-        <textarea matInput [(ngModel)]="dlgDataOut.rec[col.key]"
-                  [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-                  placeholder="{{col.colhdr}}"
-                  (ngModelChange)="triggerResize()"
-                  [disabled]="col.show==='readonly'"
-                  (change)="onValChanged(dlgDataOut.rec, col.key)"
-                  cdkTextareaAutosize
-                  cdkAutosizeMinRows="1"
-                  cdkAutosizeMaxRows=“6”
-                  #autosize="cdkTextareaAutosize"
-               matTooltip="{{col.tooltip}}"
-        ></textarea>
-        <mat-hint>(multi-line)</mat-hint>
-        <mat-hint style="color:red">{{col.errmsg}}</mat-hint>
-      </mat-form-field>
+				<mat-form-field *ngSwitchCase="'text'" appearance="outline" [style.width.px]="fld.widthval">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<textarea matInput [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+										[ngStyle]="{'background-color': fld.haschanges ? 'lightgreen' : 'inherit'}"
+										placeholder="{{fld.colhdr}}"
+										(ngModelChange)="triggerResize()"
+										[disabled]="fld.show==='readonly'"
+										(change)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+										cdkTextareaAutosize
+										cdkAutosizeMinRows="1"
+										cdkAutosizeMaxRows=“6”
+										#autosize="cdkTextareaAutosize"
+										matTooltip="{{tooltip(fld)}}"></textarea>
+					<mat-hint>{{textboxHint(fld)}}</mat-hint>
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
 
-      <mat-form-field *ngSwitchCase="'select'" appearance="outline" [style.width.px]="col.widthval" fxFlex>
-        <mat-label>{{col.colhdr}}</mat-label>
-        <mat-select [(ngModel)]="dlgDataOut.rec[col.key]"
-                    [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-                    (selectionChange)="onValChanged(dlgDataOut.rec, col.key)"
-                    [disabled]="col.show==='readonly'"
-                    matTooltip="{{col.tooltip}}"
-        >
-          <mat-option *ngIf="!col.isrequired" value="">(optional)</mat-option>
-          <mat-option *ngFor="let rec of dlgDataIn.tbldatasvc.codelistsdatasvc.getSelList(col.sellist)" [value]="rec.code">{{ rec.description }}</mat-option>
-        </mat-select>
-        <mat-hint style="color:red">{{col.errmsg}}</mat-hint>
-      </mat-form-field>
+				<mat-form-field *ngSwitchCase="'dropdown'" appearance="outline" [style.width.px]="fld.widthval">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<mat-select [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+											[ngStyle]="{'background-color': fld.haschanges ? 'lightgreen' : 'inherit'}"
+											(selectionChange)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+											[disabled]="fld.show==='readonly'"
+											matTooltip="{{tooltip(fld)}}">
+						<mat-option *ngIf="!fld.isrequired" value="">(optional)</mat-option>
+						<mat-option *ngFor="let rec of dlgDataIn.tbldatasvc.codelistsdatasvc.getSelList(fld.sellistid)" [value]="rec.code">{{ rec.description }}</mat-option>
+					</mat-select>
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
 
-      <mat-form-field *ngSwitchDefault class="form-input" appearance="outline" [style.width.px]="col.widthval" fxFlex>
-        <mat-label>{{col.colhdr}}</mat-label>
-        <input matInput
-               [ngStyle]="{'background-color': (col.haschanges) ? 'papayawhip' : 'white'}"
-               [(ngModel)]="dlgDataOut.rec[col.key]"
-               placeholder="{{col.colhdr}}"
-               [disabled]="col.show==='readonly'"
-               (change)="onValChanged(dlgDataOut.rec, col.key)"
-               matTooltip="{{col.tooltip}}" />
-        <mat-hint style="color:red">{{col.errmsg}}</mat-hint>
-      </mat-form-field>
-    </div>
+				<mat-form-field *ngSwitchDefault class="form-input" appearance="outline" [style.width.px]="fld.widthval">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<input matInput
+								 [ngStyle]="{'background-color': fld.haschanges ? 'lightgreen' : 'inherit'}"
+								 [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+								 placeholder="{{fld.colhdr}}"
+								 [disabled]="fld.show==='readonly'"
+								 (change)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+								 matTooltip="{{tooltip(fld)}}" />
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
+			</div>
+		</ng-container>
+	</div>
 
-    <!-- Tack on link
-    <div>
-      <a *ngIf="col.popupid==='enrollagreement'" (click)="openEnrollAgreementDialog()"><i class="icon fa fa-print fa-fw"></i></a>
-    </div> -->
+	<!-- in config mode (angular does not support conditional directives, so to customize for config mode we duplicate the code, one modified for config, one not) -->
+	<div *ngIf="configmode" cdkDropListGroup>
+		<ng-container *ngFor="let fld of flddefs; let i = index;">
+			<!-- Field input container (each is a drop zone for moving fields around, identified by the FldDef id) -->
+			<div *ngIf="fld.isvisible"
+					 [ngSwitch]="fld.datatype"
+					 [ngClass]="{'gcs-newline': fld.isnewline}"
+					 style="padding-top: 10px; position: relative;"
+					 id="drp_{{i}}"
+					 cdkDropList
+					 [cdkDropListData]="fld"
+					 (cdkDragLeave)="onDragLeave($event)"
+					 (cdkDragEntered)="onDragEnter($event)"
+					 (cdkDropListDropped)="onDrop($event)">
 
-  </ng-container>
+				<mat-form-field *ngSwitchCase="'date'" class="form-input" appearance="outline" [style.width.px]="fld.widthval"
+												[ngStyle]="cfgFldStyle(fld, i)"
+												cdkDrag
+												[cdkDragData]="fld"
+												(cdkDragStarted)="onDragStarted($event)"
+												(cdkDragMoved)="onDragMoved($event)"
+												(cdkDragEnded)="onDragEnded($event)">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<input matInput
+								 style="cursor: grab;background-color:white;"
+								 [matDatepicker]="picker"
+								 placeholder="{{dlgDataOut.rec[fld.fieldname] ? fld.colhdr : '(none)'}}"
+								 [disabled]="true"
+								 [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+								 (change)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+								 matTooltip="{{fld.tooltip}}" />
+					<mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+					<mat-datepicker #picker></mat-datepicker>
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
+
+				<div *ngSwitchCase="'bool'" class="form-input"
+						 [ngStyle]="cfgFldStyle(fld, i)"
+						 style="padding:10px"
+						 cdkDrag
+						 [cdkDragData]="fld"
+						 (cdkDragStarted)="onDragStarted($event)"
+						 (cdkDragMoved)="onDragMoved($event)"
+						 (cdkDragEnded)="onDragEnded($event)">
+					<mat-checkbox style="background-color:white;"
+												[(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+												[disabled]="true"
+												matTooltip="{{fld.tooltip}}">{{fld.colhdr}}</mat-checkbox>
+				</div>
+
+				<mat-form-field *ngSwitchCase="'int'" class="form-input" appearance="outline" [style.width.px]="fld.widthval"
+												[ngStyle]="cfgFldStyle(fld, i)"
+												cdkDrag
+												[cdkDragData]="fld"
+												(cdkDragStarted)="onDragStarted($event)"
+												(cdkDragMoved)="onDragMoved($event)"
+												(cdkDragEnded)="onDragEnded($event)">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<input type="number" placeholder="{{fld.colhdr}}"
+								 matInput
+								 style="background-color:white;"
+								 [disabled]="true"
+								 (ngModelChange)="dlgDataOut.rec[fld.fieldname] = $event"
+								 [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+								 (change)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+								 matTooltip="{{fld.tooltip}}" />
+					<button *ngIf="fld.popupid==='enrollagreement'"
+									mat-icon-button
+									matSuffix
+									class="small-icon-button"
+									[disabled]="true"
+									matTooltip="View Enrollment Agreement"
+									(click)="openEnrollAgreementDialog()">
+						<mat-icon>assignment_turned_in</mat-icon>
+					</button>
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
+
+				<mat-form-field *ngSwitchCase="'text'" appearance="outline" [style.width.px]="fld.widthval"
+												[ngStyle]="cfgFldStyle(fld, i)"
+												cdkDrag
+												[cdkDragData]="fld"
+												(cdkDragStarted)="onDragStarted($event)"
+												(cdkDragMoved)="onDragMoved($event)"
+												(cdkDragEnded)="onDragEnded($event)">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<textarea matInput [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+										style="background-color:white;"
+										placeholder="{{fld.colhdr}}"
+										(ngModelChange)="triggerResize()"
+										[disabled]="true"
+										(change)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+										cdkTextareaAutosize
+										cdkAutosizeMinRows="1"
+										cdkAutosizeMaxRows=“6”
+										#autosize="cdkTextareaAutosize"
+										matTooltip="{{fld.tooltip}}"></textarea>
+					<mat-hint>{{textboxHint(fld)}}</mat-hint>
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
+
+				<mat-form-field *ngSwitchCase="'dropdown'" appearance="outline" [style.width.px]="fld.widthval"
+												[ngStyle]="cfgFldStyle(fld, i)"
+												cdkDrag
+												[cdkDragData]="fld"
+												(cdkDragStarted)="onDragStarted($event)"
+												(cdkDragMoved)="onDragMoved($event)"
+												(cdkDragEnded)="onDragEnded($event)">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<mat-select [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+											style="background-color:white;"
+											(selectionChange)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+											[disabled]="true"
+											matTooltip="{{fld.tooltip}}">
+						<mat-option *ngIf="!fld.isrequired" value="">(optional)</mat-option>
+						<mat-option *ngFor="let rec of dlgDataIn.tbldatasvc.codelistsdatasvc.getSelList(fld.sellistid)" [value]="rec.code">{{rec.description}}</mat-option>
+					</mat-select>
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
+
+				<mat-form-field *ngSwitchDefault class="form-input" appearance="outline" [style.width.px]="fld.widthval"
+												[ngStyle]="cfgFldStyle(fld, i)"
+												cdkDrag
+												[cdkDragData]="fld"
+												(cdkDragStarted)="onDragStarted($event)"
+												(cdkDragMoved)="onDragMoved($event)"
+												(cdkDragEnded)="onDragEnded($event)">
+					<mat-label>{{fld.colhdr}}</mat-label>
+					<input matInput
+								 style="background-color:white;"
+								 [(ngModel)]="dlgDataOut.rec[fld.fieldname]"
+								 placeholder="{{fld.colhdr}}"
+								 [disabled]="true"
+								 (change)="onValChanged(dlgDataOut.rec, fld.fieldname)"
+								 matTooltip="{{fld.tooltip}}" />
+					<mat-hint style="color:red">{{fld.errmsg}}</mat-hint>
+				</mat-form-field>
+
+				<div style="width:19px;height:54px;float:left;position: relative; left: -22px;">
+					<button matTooltip="Configure this field"
+									style="{{cfgBtnStyle()}}"
+									(click)="openConfigDialog(fld)">
+						<mat-icon class="mat-icon-size">settings</mat-icon>
+					</button>
+
+					<div *ngIf="fld.addisnewline===fld.updisnewline">
+						<button *ngIf="!fld.addisnewline" matTooltip="Pin as start row"
+										style="{{cfgBtnStyle()}}"
+										(click)="configNewRow(fld)">
+							<mat-icon class="mat-icon-size">subdirectory_arrow_left</mat-icon>
+						</button>
+
+						<button *ngIf="fld.addisnewline" matTooltip="Unpin as start row"
+										style="{{cfgBtnStyle()}}"
+										(click)="configNewRow(fld)">
+							<mat-icon class="mat-icon-size">north_east</mat-icon>
+						</button>
+					</div>
+
+					<div *ngIf="showhiddenflds&&fld.addshow===fld.updshow">
+						<button *ngIf="fld.addshow==='show'" matTooltip="ReadOnly"
+										style="{{cfgBtnStyle()}}font-weight:100px;"
+										(click)="configShowHide(fld)">
+							<mat-icon class="mat-icon-size">visibility</mat-icon>
+						</button>
+
+						<button *ngIf="fld.addshow==='readonly'" matTooltip="Hide"
+										style="{{cfgBtnStyle()}}"
+										(click)="configShowHide(fld)">
+							<mat-icon class="mat-icon-size" style="color: gray;">visibility</mat-icon>
+						</button>
+
+						<button *ngIf="fld.addshow==='hide'" matTooltip="Show"
+										style="{{cfgBtnStyle()}}"
+										(click)="configShowHide(fld)">
+							<mat-icon class="mat-icon-size" style="color: gray;">visibility_off</mat-icon>
+						</button>
+					</div>
+
+					<!--<div matTooltip="Move to new row" style="width: 12px; height: 12px; cursor: pointer; border: 1px solid gray; margin: 0px 0px 0px 5px; "
+						 (click)="configNewRow(fld)">
+					<mat-icon *ngIf="fld.addisnewline || fld.updisnewline" style="font-size: 11px;">check box</mat-icon>
+				</div>-->
+				</div>
+			</div>
+		</ng-container>
+
+		<!-- Tack on link
+	<div>
+		<a *ngIf="fld.popupid==='enrollagreement'" (click)="openEnrollAgreementDialog()"><i class="icon fa fa-print fa-fw"></i></a>
+	</div> -->
+	</div>
 </mat-dialog-content>
 
 <mat-dialog-actions>
-  <button mat-raised-button (click)="onCancelClick()">Cancel</button>
-  <button mat-raised-button (click)="onSaveClick()" [disabled]="!hasChanges()">Save</button>
+	<div style="width: 40%;">
+		<button mat-raised-button style="float:left;" (click)="onCancelClick()">Cancel</button>
+		<button mat-raised-button *ngIf="!(isadmin && configmode)" (click)="onSaveClick()" [disabled]="!hasChanges()">Save</button>
+		<button mat-raised-button *ngIf="isadmin && configmode" [disabled]="!hasConfigChanges()" (click)="onSaveConfigClick()">Save Config</button>
+	</div>
+	<div class="right-aligned" style="width:60%;" *ngIf="isadmin && dlgDataIn.tbldatasvc.tableid!=='flddef'">
+		<div *ngIf="configmode" style="border:1px solid black;">
+			<button matTooltip="Increase Height"
+							style="{{cfgBtnStyle()}}font-weight:100px;"
+							(click)="cfgDlgResize(0, 10)">
+				<mat-icon>keyboard_arrow_up</mat-icon>
+			</button>
+			<button matTooltip="Reduce Height"
+							style="{{cfgBtnStyle()}}font-weight:100px;"
+							(click)="cfgDlgResize(0, -10)">
+				<mat-icon>keyboard_arrow_down</mat-icon>
+			</button>
+			<button matTooltip="Reduce Width"
+							style="{{cfgBtnStyle()}}font-weight:100px;"
+							(click)="cfgDlgResize(-10, 0)">
+				<mat-icon>keyboard_arrow_left</mat-icon>
+			</button>
+			<button matTooltip="Increase Width"
+							style="{{cfgBtnStyle()}}font-weight:100px;"
+							(click)="cfgDlgResize(10, 0)">
+				<mat-icon>keyboard_arrow_right</mat-icon>
+			</button>
+			<button matTooltip="Window Title"
+							style="{{cfgBtnStyle()}}font-weight:100px;"
+							(click)="cfgTitle()">
+				<mat-icon>edit</mat-icon>
+			</button>
+		</div>
+		<div>
+			<mat-checkbox [(ngModel)]="configmode"
+										[disabled]="hasChanges()"
+										(change)="setupConfigMode()"
+										style="font-weight:bold;">Config</mat-checkbox>
+			<mat-checkbox [disabled]="!configmode || hasConfigChanges()"
+										[(ngModel)]="showhiddenflds"
+										(change)="reloadFldDefs()"
+										style="font-weight: bold;">Unhide</mat-checkbox>
+		</div>
+	</div>
 </mat-dialog-actions>

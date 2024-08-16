@@ -59,13 +59,12 @@ export class AppComponent {
   // refresh dropdown
   private loadCodesetSel() {
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
-    this.tbldatasvc.getlist().subscribe(
+    this.tbldatasvc.getlist().subscribe({
       // success
-      list => {
+      next: list => {
         this.listSel.fullList = [];// clear list
-        // populate the select list from the cached student codelist
+        // populate the dropdown list from the cached student codelist
         list.forEach(rec => {
-          // build select list
           this.listSel.fullList.push({ code: rec.codeset, description: rec.codeset });
         });
 
@@ -78,25 +77,32 @@ export class AppComponent {
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
         this.listSelCtl.open();// present an open dropdown
       }
-    );
+    });
   }
 
   // refresh code list for selected codeset
   private getCodeList() {
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
-    this.tbldatasvc.getlistbycodeset(this.listSel.selected).subscribe(
+    this.tbldatasvc.getlistbycodeset(this.listSel.selected).subscribe({
       // success
-      list => {
-        this.dblist = list;
+      next: list => {
+        // for the special 'codesets' table, filter on 'tbl_' items, the rest are included
+        this.dblist = [];// clear list
+        // populate the dropdown list
+        list.forEach(rec => {
+          if (rec.codeset !== 'codesets' || rec.code.indexOf('tbl_') === 0) {
+            this.dblist.push(rec);
+          }
+        });
         this.disablebuttons = false;
 
         // when last one is deleted, reload codesets (this must be done here instead of in the onDelClick func because list is loaded async)
@@ -110,15 +116,15 @@ export class AppComponent {
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
       }
-    );
+    });
   }
 
   private refreshList() {
@@ -202,28 +208,28 @@ export class AppComponent {
 
       const bnr = this.gcsdatasvc.showNotification('Saving...', 'Save');
       if (rectosave.id > 0) {
-        // trim off unwanted fields, then update record;
-        this.tbldatasvc.updrec(this.tbldatasvc.copyRec(rectosave, {}))?.subscribe(
+        // drop off unwanted fields, then update record
+        this.tbldatasvc.updrec(this.tbldatasvc.copyRec(rectosave, {}))?.subscribe({
           // success
-          () => {
+          next: () => {
           },
 
           // error
-          (error) => {
+          error: (error) => {
             console.error('Error:', error);
           },
 
           // complete
-          () => {
+          complete: () => {
             bnr.close();
           }
-        );
+        });
       } else {
         // add rec
-        rectosave.code = rectosave.code.toUpperCase();// Upper case code
-        this.tbldatasvc.addrec(this.tbldatasvc.copyRec(rectosave, {}))?.subscribe(
+        rectosave.code = rectosave.code;// Upper case code
+        this.tbldatasvc.addrec(this.tbldatasvc.copyRec(rectosave, {}))?.subscribe({
           // success
-          () => {
+          next: () => {
             if (this.reloadandsel) {
               this.loadCodesetSel();// reload codesets
               this.listSel.selected = this.reloadandsel;// select codeset in dropdown
@@ -233,15 +239,15 @@ export class AppComponent {
           },
 
           // error
-          (error) => {
+          error: (error) => {
             console.error('Error:', error);
           },
 
           // complete
-          () => {
+          complete: () => {
             bnr.close();
           }
-        );
+        });
       }
       rectosave.isEdit = false;
       rectosave.isAdd = false;
@@ -252,17 +258,17 @@ export class AppComponent {
   // click del, pop up delete confirm
   onDelClick(rec: any) {
     // no need to check for dependencies when record is blank
-		if (!rec.code && !rec.description) {
-			this.confirmAndDelete(rec);
-			return;
-		}
+    if (!rec.code && !rec.description) {
+      this.confirmAndDelete(rec);
+      return;
+    }
 
     // check for dependencies
     const bnr = this.gcsdatasvc.showNotification('Checking for dependencies...', '');
 
-    this.tbldatasvc.getdependencies(rec).subscribe(
+    this.tbldatasvc.getdependencies(rec).subscribe({
       // success
-      (dependencies) => {
+      next: (dependencies) => {
         if (dependencies.length > 0) {
           //let msg = 'This record is used in the following tables: \n';
           //for (let i = 0; i < dependencies.length; i++) {
@@ -277,15 +283,15 @@ export class AppComponent {
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
       }
-    );
+    });
   }
 
   private confirmAndDelete(rec: any) {
@@ -293,31 +299,31 @@ export class AppComponent {
       rec.isEdit = false;
       rec.isAdd = false;
       const bnr2 = this.gcsdatasvc.showNotification('Deleting...', '');
-      this.tbldatasvc?.delrec(rec)?.subscribe(
+      this.tbldatasvc?.delrec(rec)?.subscribe({
         // success
-        () => {
+        next: () => {
           this.getCodeList();
         },
 
         // error
-        (error) => {
+        error: (error) => {
           console.error('Error:', error);
         },
 
         // complete
-        () => {
+        complete: () => {
           bnr2.close();
         }
-      );
+      });
     }
   }
 
   hasChanges(rec: any) {
-    return this.tbldatasvc.hasChanges(rec, this.origRec, this.tbldatasvc.coldefs);
+    return this.tbldatasvc.hasChanges(rec, this.origRec, this.tbldatasvc.flddefs());
   }
 
   valRec(rec: any) {
-    return this.tbldatasvc.valRec(rec, this.tbldatasvc.coldefs);
+    return this.tbldatasvc.valRec(rec, this.tbldatasvc.flddefs());
   }
 
   /** Announce the change in sort state for assistive technology. */

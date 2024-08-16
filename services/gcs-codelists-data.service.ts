@@ -1,26 +1,29 @@
 import { Injectable } from '@angular/core';
 import { GcsCodeDataService } from './gcs-code-data.service';
-import { GcsDataService, columnSchema } from './gcs-data.service';
+import { GcsDataService } from './gcs-data.service';
 import { GcsProgramDataService } from './gcs-program-data.service';
-import { Observable, map } from 'rxjs';
+import { map } from 'rxjs';
 import { GcsStudentDataService } from './gcs-student-data.service';
 import { GcsCoursesDataService } from './gcs-courses-data.service';
 import { GcsSchAvailableDataService } from './gcs-sch-available-data.service';
 import { MdlUserDataService } from './mdl-user-data.service';
+import { GcsTableFieldDefService } from './gcs-table-field-def.service';
+import { fldDef } from './gcs-table-field-defs-cache.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GcsCodelistsDataService {
-  codelists: any = {};// cached code lists used by selects or other code lookups
+  private codelists: any = {};// cached code lists used by selects or other code lookups
 
   // class-level queue arrays.  queueCodeListRef adds to these arrays and getQueuedCodeLists processes them
   mdlreqs: { index: number, methodname: string, args: {} }[] = [];
-  refarray: any[] = [];// build our list of selects keyed on unique code
+  refqueue: any[] = [];// build our list of dropdowns keyed on unique code
 
   constructor(
     private gcsdatasvc: GcsDataService,
-    private codetbldatasvc: GcsCodeDataService,
+    public flddefdatasvc: GcsTableFieldDefService,
+    public codetbldatasvc: GcsCodeDataService,
     private pgmdatasvc: GcsProgramDataService,
     private studatasvc: GcsStudentDataService,
     public crsdatasvc: GcsCoursesDataService,// needed by gcs-classes-data.service
@@ -29,17 +32,25 @@ export class GcsCodelistsDataService {
   ) {
   }
 
-  loadCodeLists(coldefs: columnSchema[]): Observable<any> {
-    // create a list of requests for each code list found in coldefs
-    coldefs.forEach(col => {
-      // each column (if not already loaded)
-      if (col.sellist) {
-        this.queueCodeListRef(col.sellist);
-      }
-    });
+  loadDependentCodeLists(flddefs: fldDef[]): any {
+    this.loadCodeListsFor(flddefs)// add requests for each code list found in flddefs
+    this.queueCodeListRef('codeset_tableid');// add request for tableids
 
     // this will get all the code lists in one call and then from the result array, build the code list and lookup dictionary for each one
     return this.getQueuedCodeLists();
+  }
+
+  private loadCodeListsFor(flddefs: fldDef[]): any {
+    // create a list of requests for each code list found in flddefs
+    flddefs?.forEach(fld => {
+      // each column (if not already loaded)
+      if (fld.addsellistid) {
+        this.queueCodeListRef(fld.addsellistid);
+      }
+      if (fld.updsellistid && fld.updsellistid !== fld.addsellistid) {
+        this.queueCodeListRef(fld.updsellistid);
+      }
+    });
   }
 
   queueCodeListRef(sellist: string): boolean {
@@ -49,20 +60,9 @@ export class GcsCodelistsDataService {
       return false;
     }
 
-    // check if already in refarray
-    let ispresent = false;
-    this.refarray.every(ref => {
-      if (ref.sellist === sellist) {
-        // already in refarray
-        ispresent = true;
-        return false;
-      }
-      return true;
-    });
-
-    if (ispresent) {
-      return false;
-    }
+    // check if already in refqueue
+    for (let i = 0; i < this.refqueue.length; i++)
+      if (this.refqueue[i].sellist === sellist) return false;
 
     let i = this.mdlreqs.length;
     let req = null;
@@ -71,34 +71,34 @@ export class GcsCodelistsDataService {
       switch (ar[1]) {
         case 'program':
           req = this.pgmdatasvc.buildcodelistreq(i);
-          this.refarray.push({ sellist: sellist, svc: this.pgmdatasvc });// for adding returned lists to codelists
+          this.refqueue.push({ sellist: sellist, svc: this.pgmdatasvc });// for adding returned lists to codelists
           break;
         case 'scholarship':
           req = this.schdatasvc.buildcodelistreq(i);
-          this.refarray.push({ sellist: sellist, svc: this.schdatasvc });// for adding returned lists to codelists
+          this.refqueue.push({ sellist: sellist, svc: this.schdatasvc });// for adding returned lists to codelists
           break;
         case 'student':
           req = this.studatasvc.buildcodelistreq(i);
-          this.refarray.push({ sellist: sellist, svc: this.studatasvc });// for adding returned lists to codelists
+          this.refqueue.push({ sellist: sellist, svc: this.studatasvc });// for adding returned lists to codelists
           break;
         case 'user':
           req = this.userdatasvc.buildcodelistreq(i);
-          this.refarray.push({ sellist: sellist, svc: this.userdatasvc });// for adding returned lists to codelists
+          this.refqueue.push({ sellist: sellist, svc: this.userdatasvc });// for adding returned lists to codelists
           break;
         case 'course':
           req = this.crsdatasvc.buildcodelistreq(i);
-          this.refarray.push({ sellist: sellist, svc: this.crsdatasvc });// for adding returned lists to codelists
+          this.refqueue.push({ sellist: sellist, svc: this.crsdatasvc });// for adding returned lists to codelists
           break;
         case 'instructor':
           req = this.userdatasvc.buildcodelistreq(i, 'users_get_instructors');
-          this.refarray.push({ sellist: sellist, svc: this.userdatasvc });// for adding returned lists to codelists
+          this.refqueue.push({ sellist: sellist, svc: this.userdatasvc });// for adding returned lists to codelists
           break;
         default:
           break;
       }
     } else if (ar[0] === 'codeset') {
       req = this.codetbldatasvc.buildcodelistreq(i, { codeset: sellist.substring(8) });
-      this.refarray.push({ sellist: sellist, svc: this.codetbldatasvc });// for adding returned lists to codelists
+      this.refqueue.push({ sellist: sellist, svc: this.codetbldatasvc });// for adding returned lists to codelists
     }
 
     if (req) {
@@ -119,14 +119,14 @@ export class GcsCodelistsDataService {
           if (ret) {
             let list: any[] = mdl.data;
 
-            // add to codelists
-            let ref = this.refarray[i];
+            // add the codelist
+            let ref = this.refqueue[i];
             this.addCodeList(ref.sellist, list, ref.svc);
           }
           return ret;// stop if error
         });
         this.mdlreqs = [];
-        this.refarray = [];
+        this.refqueue = [];
       }
       return ret;
     }));
@@ -134,9 +134,9 @@ export class GcsCodelistsDataService {
 
   // build a code list and lookup dictionary
   addCodeList(sellist: string, list: any[], svc: any) {
-    // in codelists, build a codeset: object for each select= column.  It contains 2 sub-items:
+    // add an item for each codelist.  It contains 2 sub-items:
     // list: the codeset list from moodle
-    // lookup: a dictionary object with each code populated with its description as the value.
+    // lookup: a key, value dictionary. The code is the key and the value contains the record from list, a code and display description.
     let a: any = {};
     this.codelists[sellist] = a;// save off, keyed on list code
 
@@ -148,19 +148,12 @@ export class GcsCodelistsDataService {
     // copy to new list and populate a code dictionary for quick description lookups
     list.forEach(rec => {
       let r: any = {};
-      if (svc.buildKey) {
-        r.code = svc.buildKey(rec);
-      } else {
-        r.code = rec.code
-      }
-      if (svc.buildKey) {
-        r.description = svc.buildDesc(rec);
-      } else {
-        r.description = rec.description;
-      }
+      r.code = (svc.buildKey ? r.code = svc.buildKey(rec) : rec.code);// build the key if service has a buildKey method
+      r.description = (svc.buildDesc ? svc.buildDesc(rec) : rec.description);// build the description if service has a buildDesc method
+      r.rec = rec;// in case the original record is needed
       codelist.push(r);// add each record to the code list
 
-      lookup[r.code] = r.description;// add each record to the code list keyed on code
+      lookup[r.code] = r;// add each record to the code list keyed on code
     });
 
     // sort by description
@@ -181,11 +174,23 @@ export class GcsCodelistsDataService {
   }
 
   // select list
-  getSelVal(selkey: string, code: string) {
+  getSelVal(selkey: string, code: string): string {
+    let r = this.getRec(selkey, code);
+    return r ? r.description : '';
+  }
+
+  // select list
+  getRec(selkey: string, code: string): any {
     let a = this.codelists[selkey];
-    if (a && a.lookup && a.lookup[code]) {
-      return a.lookup[code.toString().toUpperCase()];
+    if (a && a.lookup) return a.lookup[code];
+    return null;
+  }
+
+  getDlgCfg(tableid: string) {
+    try {
+      return JSON.parse(this.getSelVal('codeset_tableid', tableid));// get the dialog properties for this table
+    } catch (e) {
+      return { dlg: { width: '80%', height: '80%', title: 'Record' } };
     }
-    return '';
   }
 }

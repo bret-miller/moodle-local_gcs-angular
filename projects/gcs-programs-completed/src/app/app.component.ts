@@ -4,11 +4,12 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialog } from '@angular/material/dialog';
 
 import { GcsProgramsCompletedService } from 'services/gcs-programs-completed.service';
-import { GcsDataService, columnSchema } from 'services/gcs-data.service';
+import { GcsDataService } from 'services/gcs-data.service';
 import { Observable, map, startWith } from 'rxjs';
 import { FormControl } from '@angular/forms';
 import { GcsCodelistsDataService } from 'services/gcs-codelists-data.service';
 import { GcsStandardAddUpdRecDlgComponent } from 'projects/gcs-shared-lib/src/lib/gcs-standard-add-upd-rec-dlg/gcs-standard-add-upd-rec-dlg.component';
+import { fldDef } from 'services/gcs-table-field-defs-cache.service';
 
 @Component({
   selector: 'app-root',
@@ -57,17 +58,17 @@ export class AppComponent {
 
   // initialization
   ngAfterViewInit() {
-    // build dynamic select lists defined in coldefs
+    // build dynamic dropdown lists defined in flddefs
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
-    this.codelistsdatasvc.loadCodeLists(this.tbldatasvc.coldefs).subscribe(
+    this.codelistsdatasvc.loadDependentCodeLists(this.tbldatasvc.flddefs()).subscribe({
       // success
-      () => {
+      next: () => {
         // add (all) option at the top of the list
         this.listSel.fullList.push({ code: '', description: '(all)' });
 
-        // populate the select list from the cached student codelist
-        this.codelistsdatasvc.codelists.tbl_student.list.forEach((rec: any) => {
-          // build select list
+        // populate the dropdown list from the cached student codelist
+        this.codelistsdatasvc.getSelList('tbl_student').forEach((rec: any) => {
+          // build dropdown list
           this.listSel.fullList.push({ code: rec.code, description: rec.description });
         });
 
@@ -82,40 +83,31 @@ export class AppComponent {
       },
 
       // error
-      (error) => {
+      error: (error: any) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
       }
-    );
+    });
   }
 
   // refresh ui list
   getFullList() {
     // get a list of all records if (all) is selected, otherwise get list for the selected student
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
-    this.tbldatasvc.getlist(this.listSel.selected)?.subscribe(
+    this.tbldatasvc.getlist(this.listSel.selected)?.subscribe({
       // success
-      list => {
+      next: list => {
         this.dblist = list;
 
         // since the data is returned async, also init the material datasource in this function.
         this.dataSource = new MatTableDataSource(this.dblist);
 
-        // sort on the expanded description for columns defined with descriptions
-        this.dataSource.sortingDataAccessor = (item, property) => {
-          for (let i = 0, col; col = this.tbldatasvc.coldefs[i]; i++) {
-            if (col.islist && col.key === property) {
-              if (col.type === 'select') {
-                return this.codelistsdatasvc.getSelVal(col.sellist, item[property])
-              }
-              return item[property]
-            }
-          }
-        };
+        // sort & filter on the expanded description for columns defined with descriptions
+        this.gcsdatasvc.setSelSortFilt(this.dataSource, this.tbldatasvc.flddefs(), this.codelistsdatasvc);
 
         // for complete list, sort by student name
         if (!this.listSel.selected) {
@@ -123,33 +115,19 @@ export class AppComponent {
         }
         this.dataSource.sort = this.sort;
 
-        // filter on the expanded description for columns defined with descriptions
-        this.dataSource.filterPredicate = (item, filter) => {
-          let concat = '';
-          for (let i = 0, col; col = this.tbldatasvc.coldefs[i]; i++) {
-            if (col.islist) {
-              if (col.type === 'select') {
-                concat += this.codelistsdatasvc.getSelVal(col.sellist, item[col.key]) + ' ';
-              } else {
-                concat += item[col.key] + ' ';
-              }
-            }
-          }
-          return concat.toLowerCase().includes(filter.toLowerCase())
-        };
         this.applyListFilter(this.listFilterVal);// reapply filter if anything already in the search box
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
       }
-    );
+    });
   }
 
   applyListFilter(val: string) {
@@ -158,8 +136,8 @@ export class AppComponent {
   }
 
   // click row, pop up edit dialog
-  onRowClick(rec: any, clickedcol: columnSchema) {
-    if (clickedcol.type !== 'buttons') {
+  onRowClick(rec: any, clickedcol: fldDef) {
+    if (clickedcol.datatype !== 'buttons') {
       this.origRec = rec;// copy reference to rec in model list so we can refresh it upon save
       this.openDialog(rec);
     }
@@ -171,6 +149,7 @@ export class AppComponent {
       alert('Please select a student from the dropdown to add a record.');
       return;
     }
+    this.addmode = true;
     this.origRec = this.tbldatasvc.initRec();// "original" rec is a new empty rec
     this.origRec.studentid = this.listSel.selected;
     this.openDialog(this.origRec);// new empty rec for dialog
@@ -181,33 +160,34 @@ export class AppComponent {
     if (confirm('Are you sure you want to delete ' + rec.description + ', ' + rec.university + '?')) {
       // when Delete pressed, delete record
       const bnr = this.gcsdatasvc.showNotification('Saving...', '');
-      this.tbldatasvc?.delrec(rec)?.subscribe(
+      this.tbldatasvc?.delrec(rec)?.subscribe({
         // success
-        () => {
+        next: () => {
           this.getFullList();
         },
 
         // error
-        (error) => {
+        error: (error) => {
           console.error('Error:', error);
         },
 
         // complete
-        () => {
+        complete: () => {
           bnr.close();
         }
-      );
+      });
     }
   }
 
   // open the Add/Update dialog
   openDialog(rec: any) {
+    let cfg = this.codelistsdatasvc.getDlgCfg(this.tbldatasvc.tableid);// get the dialog properties for this table
     let dialogRef = this.dialog.open(GcsStandardAddUpdRecDlgComponent, {
       autoFocus: true,
-      width: '650px',
-      height: '700px',
+      width: cfg.dlg.width,
+      height: cfg.dlg.height,
       data: {
-        title: 'Programs Completed',// dialog title
+        title: cfg.dlg.title,
         rec: rec,// record to edit
         tbldatasvc: this.tbldatasvc// give the dialog a reference to our table data service
       }
@@ -219,6 +199,7 @@ export class AppComponent {
         alert(result.errmsg);
       } else if (result.isAdd) {
         this.getFullList();// for an add, refresh list to show new record
+        this.addmode = false;
       } else {
         this.tbldatasvc.copyRec(result.rec, this.origRec);// for update, refresh the ui list
       }

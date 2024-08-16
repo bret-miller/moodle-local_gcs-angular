@@ -8,6 +8,22 @@ import { MaterialModule } from 'modules/material-module';
 import { AppComponent } from './app.component';
 import { GcsSharedLibModule } from 'projects/gcs-shared-lib/src/lib/gcs-shared-lib.module';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
+import { APP_INITIALIZER } from '@angular/core';
+import { GcsTableFieldDefsCacheService } from 'services/gcs-table-field-defs-cache.service';
+import { catchError, of } from 'rxjs';
+
+/*
++------------------------
+| App Initialization
++------------------------*/
+// (this function is auto-subscribed to during APP_INITIALIZATION and awaits the results so the field defs are available for the app)
+export function appInitializer(flddefscachedtasvc: GcsTableFieldDefsCacheService) {
+  return () =>
+    flddefscachedtasvc.flddefsets$.pipe(
+      // Handle errors to ensure the observable completes
+      catchError(() => of())
+    );
+}
 
 @NgModule({
   declarations: [
@@ -23,6 +39,13 @@ import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
     GcsSharedLibModule,
   ],
   providers: [
+    GcsTableFieldDefsCacheService,
+    {
+      provide: APP_INITIALIZER,
+      useFactory: appInitializer,// function to subscribe to during app init
+      deps: [GcsTableFieldDefsCacheService],// pre-load
+      multi: true,
+    },
     { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } }],
   bootstrap: [AppComponent]
 })

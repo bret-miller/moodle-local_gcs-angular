@@ -66,7 +66,7 @@ export class AppComponent {
   }
 
   // initialization
-  ngOnInit() {
+  ngAfterViewInit() {
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
     this.AcademicYear = (this.today.getMonth() > 8 ? this.today.getFullYear() + 1 : this.today.getFullYear());
 
@@ -75,15 +75,15 @@ export class AppComponent {
     this.codelistsdatasvc.queueCodeListRef('codeset_pass_fail');// queue the pass_fail codelist get request
 
     // db request
-    this.codelistsdatasvc.getQueuedCodeLists().subscribe(
+    this.codelistsdatasvc.getQueuedCodeLists().subscribe({
       // success
-      success => {
+      next: success => {
         // note that if this does not succeed, fillScreen will not be called
         if (success) {
           // load student list
-          this.studatasvc.getlist().subscribe(
+          this.studatasvc.getlist().subscribe({
             // success
-            stulist => {
+            next: stulist => {
               this.listSel.visibility = (stulist.length === 0 ? 'hidden' : 'visible');
 
               stulist.forEach(sturec => {
@@ -108,23 +108,24 @@ export class AppComponent {
             },
 
             // error
-            (error) => {
+            error: (error) => {
               console.error('Error:', error);
             },
+
             // complete
-            () => {
+            complete: () => {
               bnr.close();
               this.listSelCtl.open();// present an open dropdown
             }
-          );
+          });
         }
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       }
-    );
+    });
   }
 
   fillScreen(stuid: string) {
@@ -157,10 +158,6 @@ export class AppComponent {
               // get the scholarship definition record
               this.schavailabledatasvc.getrecbycode(this.sturec.scholarshipeligible).subscribe(schdefrec => {
                 if (schdefrec.id > 0) {
-                  // TEMPORARY: replace the markdown with html
-                  schdefrec.scholarshiptext = schdefrec.scholarshiptext.replace(/\[\^/g, '<').replace(/\^\]/g, '>');
-                  schdefrec.statusconfirm = schdefrec.statusconfirm.replace(/\[\^/g, '<').replace(/\^\]/g, '>');
-                  // END TEMPORARY
                   this.AcceptingApplications = (this.today >= schdefrec.applyfrom && this.today <= schdefrec.applythru);
                   this.stuschdefrec = schdefrec;
 

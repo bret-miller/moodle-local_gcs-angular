@@ -53,9 +53,9 @@ export class GcsEnrollAgreementSignComponent {
     // since we modify the records for our own purposes, copy to a local list
     this.callerlist.forEach((callerrec: any) => {
       // read the class taken record to have a saveable record
-      this.classestakendatasvc.getrecbyid(callerrec.id).subscribe(
+      this.classestakendatasvc.getrecbyid(callerrec.id).subscribe({
         // success
-        (dbrec: any) => {
+        next: (dbrec: any) => {
           // make sure the caller's record reflects the current agreementid and agreementsigned
           callerrec.agreementid = dbrec.agreementid;
           callerrec.agreementsigned = dbrec.agreementsigned;
@@ -66,37 +66,38 @@ export class GcsEnrollAgreementSignComponent {
           // add the issigned property (reflected in the template checkbox)
           uirec.issigned = (uirec.agreementsigned);
 
-          // get the agreement info (note that the agreementid is also returned which is important when it isn't yet signed because the service chooses the appopriate one)
-          this.gcsdatasvc.getrec('classes_taken_agreement_info_get', { id: uirec.id }).subscribe(
+          // get the agreement info (note that the agreementid is also returned which is important when it isn't yet signed because the service assigns the appopriate one)
+          this.gcsdatasvc.getrec('classes_taken_agreement_info_get', { id: uirec.id }, this.classestakendatasvc.flddefs()).subscribe({
             // success
-            (earec: any) => {
+            next: (earec: any) => {
               uirec.agreementid = earec.agreementid;// set the agreementid in the local uirec
               uirec.headertext = this.gcsdatasvc.unescapeHtml(earec.headertext);// tack on the header text
               uirec.agreementtext = this.gcsdatasvc.unescapeHtml(earec.agreementtext);// tack on the agreement text
             },
 
             // error
-            (error) => {
+            error: (error) => {
               console.error('Error:', error);
             },
 
             // complete
-            () => {
+            complete: () => {
               this.checkItOff();// check it off
             }
-          );
+
+          });
         },
 
         // error
-        (error) => {
+        error: (error) => {
           console.error('Error:', error);
         },
 
         // complete
-        () => {
+        complete: () => {
           this.checkItOff();// check it off
         }
-      );
+      });
     });
 
     // load settings to get logourl

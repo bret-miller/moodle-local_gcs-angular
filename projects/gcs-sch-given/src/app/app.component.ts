@@ -4,12 +4,13 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialog } from '@angular/material/dialog';
 
 import { GcsSchGivenDataService } from 'services/gcs-sch-given-data.service';
-import { GcsDataService, columnSchema } from 'services/gcs-data.service';
+import { GcsDataService } from 'services/gcs-data.service';
 import { Observable, map, startWith } from 'rxjs';
 import { FormControl } from '@angular/forms';
 import { GcsCodelistsDataService } from 'services/gcs-codelists-data.service';
 import { GcsStudentDataService } from 'services/gcs-student-data.service';
 import { GcsStandardAddUpdRecDlgComponent } from 'projects/gcs-shared-lib/src/lib/gcs-standard-add-upd-rec-dlg/gcs-standard-add-upd-rec-dlg.component';
+import { fldDef } from 'services/gcs-table-field-defs-cache.service';
 
 @Component({
   selector: 'app-root',
@@ -60,104 +61,82 @@ export class AppComponent {
   // initialization
   ngAfterViewInit() {
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
-    // explicitly queue scholarship_category codelist
-    this.codelistsdatasvc.queueCodeListRef('codeset_scholarship_category');// queue the scholarship_category codelist get request
+    this.codelistsdatasvc.queueCodeListRef('codeset_scholarship_category');// explicitly queue scholarship_category codelist
 
-    // get queued lists plus select lists defined in coldefs
-    this.codelistsdatasvc.loadCodeLists(this.tbldatasvc.coldefs).subscribe(() => {
-      // add (all) option at the top of the list
-      this.listSel.fullList.push({ code: '', description: '(all)' });
+    // get queued lists plus dropdown lists defined in coldefs
+    this.codelistsdatasvc.loadDependentCodeLists(this.tbldatasvc.flddefs()).subscribe({
+      next: () => {
+        // add (all) option at the top of the list
+        this.listSel.fullList.push({ code: '', description: '(all)' });
 
-      this.studatasvc.getlistscholarships().subscribe(
-        // success
-        stulist => {
-          // build the dropdown list
-          stulist.forEach(sturec => {
-            this.listSel.fullList.push({ code: this.studatasvc.buildKey(sturec), description: this.studatasvc.buildDesc(sturec) });
-          });
+        this.studatasvc.getlistscholarships().subscribe({
+          // success
+          next: stulist => {
+            // build the dropdown list
+            stulist.forEach(sturec => {
+              this.listSel.fullList.push({ code: this.studatasvc.buildKey(sturec), description: this.studatasvc.buildDesc(sturec) });
+            });
 
-          // set up the incremental search
-          this.listSel.displayList = this.listSel.filt.ctl.valueChanges
-            .pipe(
-              startWith(''),
-              map(str => this.listSel.filt.doit(str))
-            );
+            // set up the incremental search
+            this.listSel.displayList = this.listSel.filt.ctl.valueChanges
+              .pipe(
+                startWith(''),
+                map(str => this.listSel.filt.doit(str))
+              );
 
-          this.getFullList();// load list
+            this.getFullList();// load list
+          }
         });
-    },
+      },
 
       // error
-      (error) => {
+      error: (error: any) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
       }
-    );
+    });
   }
 
   // refresh ui list
   getFullList() {
     // get a list of all records if (all) is selected, otherwise get list for the selected student
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
-    this.tbldatasvc.getlist(this.listSel.selected)?.subscribe(
+    this.tbldatasvc.getlist(this.listSel.selected)?.subscribe({
       // success
-      list => {
+      next: list => {
         this.dblist = list;
 
         // since the data is returned async, also init the material datasource in this function.
         this.dataSource = new MatTableDataSource(this.dblist);
 
-        // sort on the expanded description for columns defined with descriptions
-        this.dataSource.sortingDataAccessor = (item, property) => {
-          for (let i = 0, col; col = this.tbldatasvc.coldefs[i]; i++) {
-            if (col.islist && col.key === property) {
-              if (col.type === 'select') {
-                return this.codelistsdatasvc.getSelVal(col.sellist, item[property])
-              }
-              return item[property]
-            }
-          }
-        };
+        // sort & filter on the expanded description for columns defined with descriptions
+        this.gcsdatasvc.setSelSortFilt(this.dataSource, this.tbldatasvc.flddefs(), this.codelistsdatasvc);
 
         // for complete list, sort by student name
         if (!this.listSel.selected) {
           this.sort.sort({ id: 'studentid', start: 'asc', disableClear: false });
         } else {
-          this.sort.sort({ id: 'termyear', start: 'asc', disableClear: false });
+          this.sort.sort({ id: 'termyear', start: 'desc', disableClear: false });
         }
         this.dataSource.sort = this.sort;
 
-        // filter on the expanded description for columns defined with descriptions
-        this.dataSource.filterPredicate = (item, filter) => {
-          let concat = '';
-          for (let i = 0, col; col = this.tbldatasvc.coldefs[i]; i++) {
-            if (col.islist) {
-              if (col.type === 'select') {
-                concat += this.codelistsdatasvc.getSelVal(col.sellist, item[col.key]) + ' ';
-              } else {
-                concat += item[col.key] + ' ';
-              }
-            }
-          }
-          return concat.toLowerCase().includes(filter.toLowerCase())
-        };
         this.applyListFilter(this.listFilterVal);// reapply filter if anything already in the search box
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
       }
-    );
+    });
   }
 
   applyListFilter(val: string) {
@@ -166,8 +145,8 @@ export class AppComponent {
   }
 
   // click row, pop up edit dialog
-  onRowClick(rec: any, clickedcol: columnSchema) {
-    if (clickedcol.type !== 'buttons') {
+  onRowClick(rec: any, clickedcol: fldDef) {
+    if (clickedcol.datatype !== 'buttons') {
       this.origRec = rec;// copy reference to rec in model list so we can refresh it upon save
       this.openDialog(rec);
     }
@@ -191,6 +170,7 @@ export class AppComponent {
           return;
         }
 
+        this.addmode = true;
         this.origRec = this.tbldatasvc.initRec();// "original" rec is a new empty rec
         this.origRec.studentid = sturec.id;
         this.origRec.termyear = new Date().getFullYear();
@@ -205,52 +185,53 @@ export class AppComponent {
   onDelClick(rec: any) {
     const bnr = this.gcsdatasvc.showNotification('Checking for dependencies...', '');
 
-    this.tbldatasvc.getdependencies(rec).subscribe(
+    this.tbldatasvc.getdependencies(rec).subscribe({
       // success
-      (dependencies) => {
+      next: (dependencies) => {
         if (dependencies.length > 0) {
           this.gcsdatasvc.showNotification('This record cannot be deleted because it is used in another table.', '', 5000);
         } else if (confirm('Are you sure you want to delete ' + rec.termyear + '?')) {
           const bnr2 = this.gcsdatasvc.showNotification('Deleting...', '');
-          this.tbldatasvc?.delrec(rec)?.subscribe(
+          this.tbldatasvc?.delrec(rec)?.subscribe({
             // success
-            () => {
+            next: () => {
               this.getFullList();
             },
 
             // error
-            (error) => {
+            error: (error) => {
               console.error('Error:', error);
             },
 
             // complete
-            () => {
+            complete: () => {
               bnr2.close();
             }
-          );
+          });
         }
       },
 
       // error
-      (error) => {
+      error: (error) => {
         console.error('Error:', error);
       },
 
       // complete
-      () => {
+      complete: () => {
         bnr.close();
       }
-    );
+    });
   }
 
   // open the Add/Update dialog
   openDialog(rec: any) {
+    let cfg = this.codelistsdatasvc.getDlgCfg(this.tbldatasvc.tableid);// get the dialog properties for this table
     let dialogRef = this.dialog.open(GcsStandardAddUpdRecDlgComponent, {
       autoFocus: true,
-      width: '950px',
-      height: '670px',
+      width: cfg.dlg.width,
+      height: cfg.dlg.height,
       data: {
-        title: 'Scholarships',// dialog title
+        title: cfg.dlg.title,
         rec: rec,// record to edit
         tbldatasvc: this.tbldatasvc// give the dialog a reference to our table data service
       }
@@ -262,6 +243,7 @@ export class AppComponent {
         alert(result.errmsg);
       } else if (result.isAdd) {
         this.getFullList();// for an add, refresh list to show new record
+        this.addmode = false;
       } else {
         this.tbldatasvc.copyRec(result.rec, this.origRec);// for update, refresh the ui list
       }

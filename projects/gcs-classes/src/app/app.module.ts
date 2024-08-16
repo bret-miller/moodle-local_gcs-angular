@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
@@ -8,6 +8,21 @@ import { MaterialModule } from 'modules/material-module';
 import { AppComponent } from './app.component';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { GcsSharedLibModule } from 'projects/gcs-shared-lib/src/lib/gcs-shared-lib.module';
+import { catchError, of } from 'rxjs';
+import { GcsTableFieldDefsCacheService } from 'services/gcs-table-field-defs-cache.service';
+
+/*
++------------------------
+| App Initialization
++------------------------*/
+// (this function is auto-subscribed to during APP_INITIALIZATION and awaits the results so the field defs are available for the app)
+export function appInitializer(flddefscachedtasvc: GcsTableFieldDefsCacheService) {
+  return () =>
+    flddefscachedtasvc.flddefsets$.pipe(
+      // Handle errors to ensure the observable completes
+      catchError(() => of())
+    );
+}
 
 @NgModule({
   declarations: [
@@ -23,6 +38,13 @@ import { GcsSharedLibModule } from 'projects/gcs-shared-lib/src/lib/gcs-shared-l
     GcsSharedLibModule,
   ],
   providers: [
+    GcsTableFieldDefsCacheService,
+    {
+      provide: APP_INITIALIZER,
+      useFactory: appInitializer,// function to subscribe to during app init
+      deps: [GcsTableFieldDefsCacheService],// pre-load
+      multi: true,
+    },
     { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } }],
   bootstrap: [AppComponent]
 })

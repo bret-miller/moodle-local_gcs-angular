@@ -14,9 +14,9 @@
   </mat-form-field>
 
   <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
-    <ng-container [matColumnDef]="col.key" *ngFor="let col of tbldatasvc.coldefs">
+    <ng-container [matColumnDef]="col.fieldname" *ngFor="let col of tbldatasvc.coldefs()">
       <th mat-header-cell *matHeaderCellDef mat-sort-header [disabled]="!col.issort" sortActionDescription="Sort by {{ col.colhdr }}">
-        <div [ngSwitch]="col.type">
+        <div [ngSwitch]="col.datatype">
           <span *ngSwitchCase="'buttons'">
             <button mat-icon-button color="primary" class="small-icon-button" (click)="onAddClick()" [disabled]="addmode">
               <mat-icon>add</mat-icon>
@@ -28,7 +28,7 @@
         </div>
       </th>
       <td mat-cell *matCellDef="let row" (click)="onRowClick(row, col)">
-        <div [ngSwitch]="col.type">
+        <div [ngSwitch]="col.datatype">
 
           <div *ngSwitchCase="'buttons'" class="btn-edit">
             <button mat-icon-button class="small-icon-button" color="warn" (click)="onDelClick(row)" matTooltip="Delete!">
@@ -37,19 +37,19 @@
           </div>
 
           <span *ngSwitchCase="'bool'">
-            <mat-checkbox [ngModel]="row[col.key]" [disabled]="true" />
+            <mat-checkbox [ngModel]="row[col.fieldname]" [disabled]="true" />
           </span>
 
           <span *ngSwitchCase="'date'">
-            {{ row[col.key] | date: 'mediumDate' }}
+            {{ row[col.fieldname] | date: 'mediumDate' }}
           </span>
 
-          <span *ngSwitchCase="'select'">
-            {{ codelistsdatasvc.getSelVal(col.sellist, row[col.key]) }}
+          <span *ngSwitchCase="'dropdown'">
+            {{ codelistsdatasvc.getSelVal(col.addsellistid||col.updsellistid, row[col.fieldname]) }}
           </span>
 
           <span *ngSwitchDefault>
-            {{ row[col.key] }}
+            {{ row[col.fieldname] }}
           </span>
         </div>
       </td>

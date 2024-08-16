@@ -1,6 +1,5 @@
 .ng-star-inserted {
   float: left;
-  margin-right: 20px;
 }
 
 .gcs-newline {
@@ -8,4 +7,24 @@
 }
 .waiting {
   cursor: wait;
+}
+.right-aligned {
+  display: flex;
+  justify-content: flex-end; /* Align checkboxes to the right */
+}
+
+.cdk-drag {
+  cursor: grab; /* Set cursor to indicate draggable behavior */
+}
+
+.cdk-drag-animating {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+/* app.component.css */
+.drag-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+.mat-icon-size {
+  font-size: 14px; /* Adjust as needed */
 }

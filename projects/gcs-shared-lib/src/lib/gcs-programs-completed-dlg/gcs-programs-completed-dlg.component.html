@@ -1,0 +1,13 @@
+<h2 mat-dialog-title>Programs Completed</h2>
+
+<mat-dialog-content class="mat-typography" style="max-height: 80vh;" fxLayout="row wrap" fxLayoutGap="16px">
+	<!--
+	+------------------------------------------------------
+	|	Show his/her completed programs
+	+--------------------------------------------------- -->
+	<lib-gcs-programs-completed [student-id]="stuid"></lib-gcs-programs-completed>
+</mat-dialog-content>
+
+<mat-dialog-actions>
+	<button mat-raised-button (click)="close()">Close</button>
+</mat-dialog-actions>

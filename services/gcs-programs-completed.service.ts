@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 
 import { GcsDataService } from 'services/gcs-data.service';
-import { GcsCodelistsDataService } from './gcs-codelists-data.service';
 import { GcsTableFieldDefService } from './gcs-table-field-def.service';
 import { GcsTableFieldDefsCacheService, fldDef } from './gcs-table-field-defs-cache.service';
+import { GcsCodelistsCacheService } from './gcs-codelists-cache.service';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -35,7 +36,7 @@ export class GcsProgramsCompletedService {
     private gcsdatasvc: GcsDataService,
     private flddefscachedatasvc: GcsTableFieldDefsCacheService,
     public flddefdatasvc: GcsTableFieldDefService,
-    public codelistsdatasvc: GcsCodelistsDataService,
+    public codelistscachesvc: GcsCodelistsCacheService,
   ) {
     // assure the master field definitions array has been initialized
     this.flddefscachedatasvc.flddefsets$.subscribe({
@@ -54,9 +55,9 @@ export class GcsProgramsCompletedService {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
-      }
+      error: (error: string) => {
+        this.gcsdatasvc.showNotification(error, '');
+      },
     });
   }
 
@@ -82,7 +83,6 @@ export class GcsProgramsCompletedService {
       this.flddefs().every(flddef => {
         if (flddef.fieldname === 'studentid') {
           flddef.islist = true;
-          flddef.issort = true;
           return false;
         }
         return true;
@@ -94,7 +94,6 @@ export class GcsProgramsCompletedService {
       this.flddefs().every(flddef => {
         if (flddef.fieldname === 'studentid') {
           flddef.islist = false;
-          flddef.issort = false;
           return false;
         }
         return true;
@@ -149,23 +148,17 @@ export class GcsProgramsCompletedService {
   }
 
   valRec(rec: any, flddefs: fldDef[]) {
-    // note that we want to use the flddefs from the dialog, not the service's flddefs
-    let isvalid = this.gcsdatasvc.valRec(flddefs, this.codelistsdatasvc, rec);
-    //if (isvalid) {
-    // custom validation
-    //if (rec.termyear < 2000) {
-    //  alert('Invalid Term Year');
-    //  return false;
-    //}
-    return isvalid;
+    return new Observable<string>((observer) => {
+      // note that we want to use the flddefs parm from the dialog, not the service's flddefs
+      observer.next(this.gcsdatasvc.stdValRec(flddefs, this.codelistscachesvc, rec));
+      observer.complete();
+      return;
+    });
+
+    // there are no other validation checks to perform
   }
 
   flddefsForDialogMode(isAdd: boolean) {
     return this.flddefdatasvc.getFldDefsForDialogMode(isAdd, this.flddefs());
-  }
-
-  // compare method
-  hasChanges(rec: any, origrec: any, flddefs: fldDef[]) {
-    return this.gcsdatasvc.hasChanges(flddefs, rec, origrec);
   }
 }

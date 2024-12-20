@@ -1,6 +1,6 @@
 <div class="edit-users mat-elevation-z8">
   <mat-form-field *ngIf="listSel.show" style="padding-right:32px;" [style.width.px]="listSel.widthpx">
-    <mat-select #listSelCtl placeholder="Select {{listSel.placeholder}}..." (selectionChange)="getFullList()" [(ngModel)]="listSel.selected">
+    <mat-select #listSelCtl [disabled]="listSel.disabled" placeholder="Select {{listSel.placeholder}}..." (selectionChange)="getFullList()" [(ngModel)]="listSel.selected">
       <mat-option *ngIf="listSel.filt.show">
         <ngx-mat-select-search [formControl]="listSel.filt.ctl" placeholderLabel="Filter..."></ngx-mat-select-search>
       </mat-option>
@@ -13,27 +13,29 @@
     <input matInput (keyup)="applyListFilter(input.value)" #input value="">
   </mat-form-field>
 
+	<button mat-icon-button color="primary" class="small-icon-button" (click)="onAddClick()" [disabled]="addmode">
+		<mat-icon>add</mat-icon>
+	</button>
+
   <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
     <ng-container [matColumnDef]="col.fieldname" *ngFor="let col of tbldatasvc.coldefs()">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header [disabled]="!col.issort" sortActionDescription="Sort by {{ col.colhdr }}">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by {{ col.colhdr }}">
         <div [ngSwitch]="col.datatype">
-          <span *ngSwitchCase="'buttons'">
-            <button mat-icon-button color="primary" class="small-icon-button" (click)="onAddClick()" [disabled]="addmode">
-              <mat-icon>add</mat-icon>
-            </button>
-          </span>
-          <span *ngSwitchDefault>
-            {{ col.colhdr }}
-          </span>
+          <span *ngSwitchCase="'buttons'"></span>
+          <span *ngSwitchDefault>{{ col.colhdr }}</span>
         </div>
       </th>
       <td mat-cell *matCellDef="let row" (click)="onRowClick(row, col)">
         <div [ngSwitch]="col.datatype">
 
           <div *ngSwitchCase="'buttons'" class="btn-edit">
-            <button mat-icon-button class="small-icon-button" color="warn" (click)="onDelClick(row)" matTooltip="Delete!">
-              <mat-icon>delete</mat-icon>
-            </button>
+            <ng-container *ngFor="let btn of btnlist">
+              <button mat-icon-button class="small-icon-button" [color]="btn.color" matTooltip="{{btn.tooltip}} {{iconbtns[row.id+btn.icon]?.reccnt}}"
+                      (click)="btn.click(row)"
+                      [disabled]="iconbtns[row.id+btn.icon]?.disabled">
+                <mat-icon>{{ btn.icon }}</mat-icon>
+              </button>
+            </ng-container>
           </div>
 
           <span *ngSwitchCase="'bool'">
@@ -45,7 +47,7 @@
           </span>
 
           <span *ngSwitchCase="'dropdown'">
-            {{ codelistsdatasvc.getSelVal(col.addsellistid||col.updsellistid, row[col.fieldname]) }}
+            {{ codelistscachesvc.getSelVal(col.addsellistid||col.updsellistid, row[col.fieldname]) }}
           </span>
 
           <span *ngSwitchDefault>
@@ -55,7 +57,7 @@
       </td>
     </ng-container>
     <tr mat-header-row *matHeaderRowDef="tbldatasvc.displayedColumns; sticky:true;"></tr>
-    <tr mat-row *matRowDef="let row; columns: tbldatasvc.displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: tbldatasvc.displayedColumns" (mouseenter)="SetIconsSts(row)"></tr>
 
     <!-- Row shown when there is no matching data. -->
     <tr class="mat-row" *matNoDataRow>

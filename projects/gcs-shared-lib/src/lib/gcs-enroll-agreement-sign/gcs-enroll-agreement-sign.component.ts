@@ -76,8 +76,8 @@ export class GcsEnrollAgreementSignComponent {
             },
 
             // error
-            error: (error) => {
-              console.error('Error:', error);
+            error: (error: string) => {
+              this.gcsdatasvc.showNotification(error, '');
             },
 
             // complete
@@ -89,8 +89,8 @@ export class GcsEnrollAgreementSignComponent {
         },
 
         // error
-        error: (error) => {
-          console.error('Error:', error);
+        error: (error: string) => {
+          this.gcsdatasvc.showNotification(error, '');
         },
 
         // complete

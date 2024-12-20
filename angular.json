@@ -48,7 +48,6 @@
             "tsConfig": "projects/gcs-program-list/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-program-list/src/favicon.ico",
               "projects/gcs-program-list/src/assets"
             ],
             "styles": [
@@ -112,7 +111,6 @@
             "tsConfig": "projects/gcs-program-list/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-program-list/src/favicon.ico",
               "projects/gcs-program-list/src/assets"
             ],
             "styles": [
@@ -169,7 +167,6 @@
             "tsConfig": "projects/gcs-code-management/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-code-management/src/favicon.ico",
               "projects/gcs-code-management/src/assets"
             ],
             "styles": [
@@ -233,7 +230,6 @@
             "tsConfig": "projects/gcs-code-management/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-code-management/src/favicon.ico",
               "projects/gcs-code-management/src/assets"
             ],
             "styles": [
@@ -290,7 +286,6 @@
             "tsConfig": "projects/gcs-term-dates/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-term-dates/src/favicon.ico",
               "projects/gcs-term-dates/src/assets"
             ],
             "styles": [
@@ -354,7 +349,6 @@
             "tsConfig": "projects/gcs-term-dates/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-term-dates/src/favicon.ico",
               "projects/gcs-term-dates/src/assets"
             ],
             "styles": [
@@ -411,7 +405,6 @@
             "tsConfig": "projects/gcs-courses/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-courses/src/favicon.ico",
               "projects/gcs-courses/src/assets"
             ],
             "styles": [
@@ -475,7 +468,6 @@
             "tsConfig": "projects/gcs-courses/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-courses/src/favicon.ico",
               "projects/gcs-courses/src/assets"
             ],
             "styles": [
@@ -531,7 +523,6 @@
             "tsConfig": "projects/gcs-classes/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-classes/src/favicon.ico",
               "projects/gcs-classes/src/assets"
             ],
             "styles": [
@@ -595,7 +586,6 @@
             "tsConfig": "projects/gcs-classes/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-classes/src/favicon.ico",
               "projects/gcs-classes/src/assets"
             ],
             "styles": [
@@ -651,7 +641,6 @@
             "tsConfig": "projects/gcs-student/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-student/src/favicon.ico",
               "projects/gcs-student/src/assets"
             ],
             "styles": [
@@ -715,7 +704,6 @@
             "tsConfig": "projects/gcs-student/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-student/src/favicon.ico",
               "projects/gcs-student/src/assets"
             ],
             "styles": [
@@ -771,7 +759,6 @@
             "tsConfig": "projects/gcs-program-req/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-program-req/src/favicon.ico",
               "projects/gcs-program-req/src/assets"
             ],
             "styles": [
@@ -835,7 +822,6 @@
             "tsConfig": "projects/gcs-program-req/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-program-req/src/favicon.ico",
               "projects/gcs-program-req/src/assets"
             ],
             "styles": [
@@ -891,7 +877,6 @@
             "tsConfig": "projects/gcs-permitted-courses/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-permitted-courses/src/favicon.ico",
               "projects/gcs-permitted-courses/src/assets"
             ],
             "styles": [
@@ -955,7 +940,6 @@
             "tsConfig": "projects/gcs-permitted-courses/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-permitted-courses/src/favicon.ico",
               "projects/gcs-permitted-courses/src/assets"
             ],
             "styles": [
@@ -1011,7 +995,6 @@
             "tsConfig": "projects/gcs-classes-taken/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-classes-taken/src/favicon.ico",
               "projects/gcs-classes-taken/src/assets"
             ],
             "styles": [
@@ -1075,7 +1058,6 @@
             "tsConfig": "projects/gcs-classes-taken/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-classes-taken/src/favicon.ico",
               "projects/gcs-classes-taken/src/assets"
             ],
             "styles": [
@@ -1131,7 +1113,6 @@
             "tsConfig": "projects/gcs-sch-given/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-sch-given/src/favicon.ico",
               "projects/gcs-sch-given/src/assets"
             ],
             "styles": [
@@ -1195,7 +1176,6 @@
             "tsConfig": "projects/gcs-sch-given/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-sch-given/src/favicon.ico",
               "projects/gcs-sch-given/src/assets"
             ],
             "styles": [
@@ -1251,7 +1231,6 @@
             "tsConfig": "projects/gcs-sch-available/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-sch-available/src/favicon.ico",
               "projects/gcs-sch-available/src/assets"
             ],
             "styles": [
@@ -1315,7 +1294,6 @@
             "tsConfig": "projects/gcs-sch-available/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-sch-available/src/favicon.ico",
               "projects/gcs-sch-available/src/assets"
             ],
             "styles": [
@@ -1371,7 +1349,6 @@
             "tsConfig": "projects/gcs-enroll-agreements/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-enroll-agreements/src/favicon.ico",
               "projects/gcs-enroll-agreements/src/assets"
             ],
             "styles": [
@@ -1435,7 +1412,6 @@
             "tsConfig": "projects/gcs-enroll-agreements/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-enroll-agreements/src/favicon.ico",
               "projects/gcs-enroll-agreements/src/assets"
             ],
             "styles": [
@@ -1491,7 +1467,6 @@
             "tsConfig": "projects/gcs-sch-application/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-sch-application/src/favicon.ico",
               "projects/gcs-sch-application/src/assets"
             ],
             "styles": [
@@ -1555,7 +1530,6 @@
             "tsConfig": "projects/gcs-sch-application/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-sch-application/src/favicon.ico",
               "projects/gcs-sch-application/src/assets"
             ],
             "styles": [
@@ -1611,7 +1585,6 @@
             "tsConfig": "projects/gcs-enroll-agreements-signing/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-enroll-agreements-signing/src/favicon.ico",
               "projects/gcs-enroll-agreements-signing/src/assets"
             ],
             "styles": [
@@ -1675,7 +1648,6 @@
             "tsConfig": "projects/gcs-enroll-agreements-signing/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-enroll-agreements-signing/src/favicon.ico",
               "projects/gcs-enroll-agreements-signing/src/assets"
             ],
             "styles": [
@@ -1732,7 +1704,6 @@
             "tsConfig": "projects/gcs-programs-completed/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-programs-completed/src/favicon.ico",
               "projects/gcs-programs-completed/src/assets"
             ],
             "styles": [
@@ -1796,7 +1767,6 @@
             "tsConfig": "projects/gcs-programs-completed/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/gcs-programs-completed/src/favicon.ico",
               "projects/gcs-programs-completed/src/assets"
             ],
             "styles": [

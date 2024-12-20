@@ -1,0 +1,13 @@
+<h2 mat-dialog-title>Scholarship Application</h2>
+
+<mat-dialog-content class="mat-typography" style="max-height: 80vh;" fxLayout="row wrap" fxLayoutGap="16px">
+	<!--
+	+------------------------------------------------------
+	|	Show his/her application
+	+--------------------------------------------------- -->
+	<lib-gcs-sch-application [student-id]="stuid"></lib-gcs-sch-application>
+</mat-dialog-content>
+
+<mat-dialog-actions>
+	<button mat-raised-button (click)="close()">Close</button>
+</mat-dialog-actions>

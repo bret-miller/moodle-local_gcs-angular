@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 
 import { GcsDataService } from 'services/gcs-data.service';
-import { GcsCodelistsDataService } from './gcs-codelists-data.service';
 import { GcsTableFieldDefsCacheService, fldDef, fldDefSets } from './gcs-table-field-defs-cache.service';
+import { GcsCodelistsCacheService } from './gcs-codelists-cache.service';
+import { of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -44,7 +45,7 @@ export class GcsTableFieldDefService {
   constructor(
     private gcsdatasvc: GcsDataService,
     private flddefscachedatasvc: GcsTableFieldDefsCacheService,
-    public codelistsdatasvc: GcsCodelistsDataService,
+    public codelistscachesvc: GcsCodelistsCacheService,
   ) {
     // assure the master field definitions array has been initialized
     this.flddefscachedatasvc.flddefsets$.subscribe({
@@ -68,9 +69,9 @@ export class GcsTableFieldDefService {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
-      }
+      error: (error: string) => {
+        this.gcsdatasvc.showNotification(error, '');
+      },
     });
   }
 
@@ -157,7 +158,7 @@ export class GcsTableFieldDefService {
 
   valRec(rec: any, flddefs: fldDef[]) {
     // note that we want to use the flddefs from the dialog, not this service's flddefs
-    //let isvalid = this.gcsdatasvc.valRec(flddefs, this.codelistsdatasvc, rec);
+    //let isvalid = this.gcsdatasvc.stdValRec(flddefs, this.codelistsdatasvc, rec);
     //if (isvalid) {
     // custom validation
     //if (rec.termyear < 2000) {
@@ -165,12 +166,7 @@ export class GcsTableFieldDefService {
     //  return false;
     //}
     //return isvalid;
-    return true;
-  }
-
-  // compare method
-  hasChanges(rec: any, origrec: any, flddefs: fldDef[]) {
-    return this.gcsdatasvc.hasChanges(flddefs, rec, origrec);
+    return of('');
   }
 
   // called for our flddefs

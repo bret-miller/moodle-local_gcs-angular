@@ -51,9 +51,9 @@ export class MdlUserDataService {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
-      }
+      error: (error: string) => {
+        this.gcsdatasvc.showNotification(error, '');
+      },
     });
   }
 
@@ -73,7 +73,7 @@ export class MdlUserDataService {
   }
 
   // get a req object to be used later to get the list
-  buildcodelistreq(i: number, func: string = 'users_get_all') {
+  buildcodelistreq(i: number, func: string) {
     return this.gcsdatasvc.fmtgcsreq(i, func, {});
   }
 

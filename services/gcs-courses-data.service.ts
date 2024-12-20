@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 
 import { GcsDataService } from 'services/gcs-data.service';
-import { GcsCodelistsDataService } from './gcs-codelists-data.service';
 import { GcsTableFieldDefService } from './gcs-table-field-def.service';
 import { GcsTableFieldDefsCacheService, fldDef } from './gcs-table-field-defs-cache.service';
+import { GcsCodelistsCacheService } from './gcs-codelists-cache.service';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -35,7 +36,7 @@ export class GcsCoursesDataService {
     private gcsdatasvc: GcsDataService,
     private flddefscachedatasvc: GcsTableFieldDefsCacheService,
     public flddefdatasvc: GcsTableFieldDefService,
-    public codelistsdatasvc: GcsCodelistsDataService,
+    public codelistscachesvc: GcsCodelistsCacheService,
   ) {
     // assure the master field definitions array has been initialized
     this.flddefscachedatasvc.flddefsets$.subscribe({
@@ -54,9 +55,9 @@ export class GcsCoursesDataService {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
-      }
+      error: (error: string) => {
+        this.gcsdatasvc.showNotification(error, '');
+      },
     });
   }
 
@@ -71,7 +72,7 @@ export class GcsCoursesDataService {
   }
 
   // get a req object to be used later to get the list
-  buildcodelistreq(i: number) {
+  buildcodelistreq(i: number, x: any) {
     return this.gcsdatasvc.fmtgcsreq(i, 'courses_get', {});
   }
 
@@ -102,7 +103,7 @@ export class GcsCoursesDataService {
 
   // get list of table record dependencies
   getdependencies(rec: any) {
-    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'course', keycsv: rec.coursecode }, this.flddefs());
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: this.tableid, keycsv: rec.coursecode }, this.flddefs());
   }
 
   /*
@@ -130,24 +131,45 @@ export class GcsCoursesDataService {
   }
 
   valRec(rec: any, flddefs: fldDef[]) {
-    // note that we want to use the flddefs from the dialog, not the service's flddefs
-    let isvalid = this.gcsdatasvc.valRec(flddefs, this.codelistsdatasvc, rec);
-    //if (isvalid) {
-    // custom validation
-    //if (rec.termyear < 2000) {
-    //  alert('Invalid Term Year');
-    //  return false;
-    //}
-    return isvalid;
+    rec.coursecode = rec.coursecode.toUpperCase();// Force code to uppercase
+
+    return new Observable<string>((observer) => {
+      // For standard errors or updates, just pass back the validation results (note that we want to use the flddefs from the dialog, not the service's flddefs)
+      let errmsg = this.gcsdatasvc.stdValRec(flddefs, this.codelistscachesvc, rec);
+      if (errmsg) {
+        observer.next(errmsg);
+        observer.complete();
+        return;
+      }
+
+      // Read for possible duplicate record
+      const bnr = this.gcsdatasvc.showNotification('checking for duplicate...', 'save');
+      this.getrecbycode(rec.coursecode).subscribe({
+        // returns a list of one record if it exists
+        next: (dbrec) => {// either returns the record or a boolean false object
+          // record found on db:  for adds or if a key field has changed, indicate it's a duplicate
+          if (dbrec && dbrec.id != rec.id) {// note that the dbrec.id is a string whereas the rec.id is a number type so the compare cannot be ===
+            errmsg = '"' + this.codelistscachesvc.getSelVal('tbl_course', dbrec.coursecode) + '" is already defined.';
+          }
+          observer.next(errmsg);
+        },
+        error: (error) => {
+          bnr.close();
+          observer.next(error);
+          observer.complete();
+          return;
+        },
+        complete: () => {
+          bnr.close();
+          observer.complete();
+          return;
+        }
+      });
+    });
   }
 
   flddefsForDialogMode(isAdd: boolean) {
     return this.flddefdatasvc.getFldDefsForDialogMode(isAdd, this.flddefs());
-  }
-
-  // compare method
-  hasChanges(rec: any, origrec: any, flddefs: fldDef[]) {
-    return this.gcsdatasvc.hasChanges(flddefs, rec, origrec);
   }
 
   buildKey(rec: any) {

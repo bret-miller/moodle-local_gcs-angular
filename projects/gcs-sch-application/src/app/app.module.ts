@@ -7,6 +7,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MaterialModule } from 'modules/material-module';
 import { AppComponent } from './app.component';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
+import { GcsSharedLibModule } from 'projects/gcs-shared-lib/src/lib/gcs-shared-lib.module';
 import { APP_INITIALIZER } from '@angular/core';
 import { GcsTableFieldDefsCacheService } from 'services/gcs-table-field-defs-cache.service';
 import { catchError, of } from 'rxjs';
@@ -35,6 +36,7 @@ export function appInitializer(flddefscachedtasvc: GcsTableFieldDefsCacheService
     HttpClientModule,
     MaterialModule,
     ReactiveFormsModule,
+    GcsSharedLibModule,
   ],
   providers: [
     GcsTableFieldDefsCacheService,

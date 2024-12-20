@@ -17,6 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{14
 		services\gcs-classes-data.service.ts = services\gcs-classes-data.service.ts
 		services\gcs-classes-taken-data.service.ts = services\gcs-classes-taken-data.service.ts
 		services\gcs-code-data.service.ts = services\gcs-code-data.service.ts
+		services\gcs-codelists-cache.service.ts = services\gcs-codelists-cache.service.ts
 		services\gcs-codelists-data.service.ts = services\gcs-codelists-data.service.ts
 		services\gcs-courses-data.service.ts = services\gcs-courses-data.service.ts
 		services\gcs-data.service.ts = services\gcs-data.service.ts

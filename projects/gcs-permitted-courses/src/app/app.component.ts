@@ -6,8 +6,9 @@ import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialog } from '@angular/material/dialog'
 import { GcsPermittedCoursesDataService } from 'services/gcs-permitted-courses-data.service';
 import { GcsDataService } from 'services/gcs-data.service';
 import { FormControl } from '@angular/forms';
-import { Observable, map, startWith } from 'rxjs';
+import { Observable, map, of, startWith } from 'rxjs';
 import { GcsCodelistsDataService } from 'services/gcs-codelists-data.service';
+import { GcsCodelistsCacheService } from 'services/gcs-codelists-cache.service';
 import { GcsStandardAddUpdRecDlgComponent } from 'projects/gcs-shared-lib/src/lib/gcs-standard-add-upd-rec-dlg/gcs-standard-add-upd-rec-dlg.component';
 import { fldDef } from 'services/gcs-table-field-defs-cache.service';
 
@@ -21,6 +22,7 @@ import { fldDef } from 'services/gcs-table-field-defs-cache.service';
 })
 export class AppComponent {
   dblist: any[] = [];// list of records from moodle
+  iconbtns: any = {};// icon buttons statuses lookup (key is rec.id + icon name).  Set asynchronously as mouse touches a row.
   origRec!: any;// pointer to the selected record in the list so it can be individually refreshed after save
   addmode: boolean = false;// add mode flag
   listFilterVal: string = '';// search list
@@ -29,6 +31,7 @@ export class AppComponent {
   @ViewChild('listSelCtl') listSelCtl: any;
   listSel = {
     show: true,
+    disabled: false,
     fullList: new Array<any>,
     displayList: new Observable<any[]>,// shown in dropdown and dynamically filtered by what is typed in the filter ctl
     selected: '',// default dropdown selection
@@ -45,6 +48,17 @@ export class AppComponent {
     placeholder: 'Program',// dropdown label
   };
 
+  // button column buttons
+  btnlist = [
+    {
+      icon: 'delete',
+      color: 'warn',
+      click: (rec: any) => this.onDelClick(rec),
+      mouseenter: (rec: any) => { },
+      tooltip: 'Delete this record!'
+    },
+  ];
+
   // mat properties
   dataSource: MatTableDataSource<any> = new MatTableDataSource(this.dblist);
   @ViewChild(MatSort) sort!: MatSort;// sort control
@@ -54,6 +68,7 @@ export class AppComponent {
     private dialog: MatDialog,
     public tbldatasvc: GcsPermittedCoursesDataService,
     public codelistsdatasvc: GcsCodelistsDataService,
+    public codelistscachesvc: GcsCodelistsCacheService,
   ) {
   }
 
@@ -65,7 +80,7 @@ export class AppComponent {
       // success
       next: () => {
         // populate the dropdown list from the cached codelist
-        this.codelistsdatasvc.getSelList('tbl_program').forEach((rec: any) => {
+        this.codelistscachesvc.getSelList('tbl_program').forEach((rec: any) => {
           // build dropdown list
           this.listSel.fullList.push({ code: rec.code, description: rec.description });
         });
@@ -80,8 +95,9 @@ export class AppComponent {
       },
 
       // error
-      error: (error: any) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -108,11 +124,17 @@ export class AppComponent {
         });
         this.dblist = list;
 
+        //// set disabled flags on first few recs
+        //this.dblist.every((rec, i) => {
+        //  this.SetIconsSts(rec);
+        //  return (i < 15); // check the first few for disable status.  They will be checked on a per-record basis anyway.
+        //});
+
         // since the data is returned async, also init the material datasource in this function.
         this.dataSource = new MatTableDataSource(this.dblist);
 
         // sort & filter on the expanded description for columns defined with descriptions
-        this.gcsdatasvc.setSelSortFilt(this.dataSource, this.tbldatasvc.flddefs(), this.codelistsdatasvc);
+        this.gcsdatasvc.setSelSortFilt(this.dataSource, this.tbldatasvc.flddefs(), this.codelistscachesvc);
 
         this.dataSource.sort = this.sort;
 
@@ -120,8 +142,9 @@ export class AppComponent {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -154,18 +177,20 @@ export class AppComponent {
   // click del, pop up delete confirm
   onDelClick(rec: any) {
     // comfirm and delete record
-    if (confirm('Are you sure you want to delete ' + rec.programcode + ' - ' + rec.categorycode + ' - ' + rec.coursecode + '?')) {
+    if (confirm('Are you sure you want to delete "' + this.codelistscachesvc.getSelVal('tbl_course', rec.coursecode) + '" from\n' +
+      this.codelistscachesvc.getSelVal('tbl_program', rec.programcode) + ' - ' + this.codelistscachesvc.getSelVal('codeset_category', rec.categorycode) + '?')) {
       // when Delete pressed, delete record
-      const bnr = this.gcsdatasvc.showNotification('Saving...', '');
-      this.tbldatasvc?.delrec(rec)?.subscribe({
+      const bnr = this.gcsdatasvc.showNotification('Deleting...', '');
+      this.tbldatasvc.delrec(rec)?.subscribe({
         // success
         next: () => {
           this.getFullList();
         },
 
         // error
-        error: (error) => {
-          console.error('Error:', error);
+        error: (error: string) => {
+          bnr.close();
+          this.gcsdatasvc.showNotification(error, '');
         },
 
         // complete
@@ -176,9 +201,12 @@ export class AppComponent {
     }
   }
 
+  SetIconsSts(rec: any) {
+  }
+
   // open the Add/Update dialog
   openDialog(rec: any) {
-    let cfg = this.codelistsdatasvc.getDlgCfg(this.tbldatasvc.tableid);// get the dialog properties for this table
+    let cfg = this.codelistscachesvc.getDlgCfg(this.tbldatasvc.tableid);// get the dialog properties for this table
     let dialogRef = this.dialog.open(GcsStandardAddUpdRecDlgComponent, {
       autoFocus: true,
       width: cfg.dlg.width,
@@ -192,13 +220,13 @@ export class AppComponent {
 
     // post-close processing
     dialogRef.afterClosed().subscribe(result => {
+      this.addmode = false;
       if (result.errmsg) {
         alert(result.errmsg);
       } else if (result.isAdd) {
         this.getFullList();// for an add, refresh list to show new record
-        this.addmode = false;
       } else {
-        this.tbldatasvc.copyRec(result.rec, this.origRec);// for update, refresh the ui list
+        this.tbldatasvc.copyRec(result.rec, this.origRec);// for update, refresh the ui list record with the record passed back from the dialog
       }
     });
   }

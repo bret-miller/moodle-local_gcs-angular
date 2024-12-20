@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 
 import { GcsDataService } from 'services/gcs-data.service';
-import { GcsCodelistsDataService } from './gcs-codelists-data.service';
 import { GcsTableFieldDefService } from './gcs-table-field-def.service';
 import { GcsTableFieldDefsCacheService, fldDef } from './gcs-table-field-defs-cache.service';
+import { GcsCodelistsCacheService } from './gcs-codelists-cache.service';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -35,7 +36,7 @@ export class GcsSchAvailableDataService {
     private gcsdatasvc: GcsDataService,
     private flddefscachedatasvc: GcsTableFieldDefsCacheService,
     public flddefdatasvc: GcsTableFieldDefService,
-    public codelistsdatasvc: GcsCodelistsDataService,
+    public codelistscachesvc: GcsCodelistsCacheService,
   ) {
     // assure the master field definitions array has been initialized
     this.flddefscachedatasvc.flddefsets$.subscribe({
@@ -54,9 +55,9 @@ export class GcsSchAvailableDataService {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
-      }
+      error: (error: string) => {
+        this.gcsdatasvc.showNotification(error, '');
+      },
     });
   }
 
@@ -71,7 +72,7 @@ export class GcsSchAvailableDataService {
   }
 
   // get a req object to be used later to get the list
-  buildcodelistreq(i: number) {
+  buildcodelistreq(i: number, x: any) {
     return this.gcsdatasvc.fmtgcsreq(i, 'sch_available_get_all', {});
   }
 
@@ -87,10 +88,6 @@ export class GcsSchAvailableDataService {
 
   // update specific record
   updrec(rec: any) {
-    // TEMPORARY: replace the markdown with html
-    rec.scholarshiptext = rec.scholarshiptext.replace(/\[\^/g, '<').replace(/\^\]/g, '>');
-    rec.statusconfirm = rec.statusconfirm.replace(/\[\^/g, '<').replace(/\^\]/g, '>');
-    // END TEMPORARY
     return this.gcsdatasvc.updrec('sch_available_update', rec, this.flddefs());
   }
 
@@ -106,7 +103,12 @@ export class GcsSchAvailableDataService {
 
   // get list of table record dependencies
   getdependencies(rec: any) {
-    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'scholarship', keycsv: rec.scholarshipcode }, this.flddefs());
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: this.tableid, keycsv: rec.scholarshipcode }, this.flddefs());
+  }
+
+  // queue request to get list of table record dependencies
+  queuegetdependencies(rec: any, queue: any[]) {
+    return this.gcsdatasvc.queuegetlist('table_record_dependencies', { tablecode: this.tableid, keycsv: rec.scholarshipcode }, queue);
   }
 
   /*
@@ -134,24 +136,48 @@ export class GcsSchAvailableDataService {
   }
 
   valRec(rec: any, flddefs: fldDef[]) {
-    // note that we want to use the flddefs from the dialog, not the service's flddefs
-    let isvalid = this.gcsdatasvc.valRec(flddefs, this.codelistsdatasvc, rec);
-    //if (isvalid) {
-    // custom validation
-    //if (rec.termyear < 2000) {
-    //  alert('Invalid Term Year');
-    //  return false;
-    //}
-    return isvalid;
+    return new Observable<string>((observer) => {
+      // For standard errors or updates, just pass back the validation results (note that we want to use the flddefs from the dialog, not the service's flddefs)
+      let errmsg = this.gcsdatasvc.stdValRec(flddefs, this.codelistscachesvc, rec);
+      if (errmsg) {
+        observer.next(errmsg);
+        observer.complete();
+        return;
+      }
+
+      // For adds, check for duplicate record
+      const bnr = this.gcsdatasvc.showNotification('checking for duplicate...', 'save');
+      this.getlist().subscribe({
+        next: (list) => {
+          // look through the list to see if the record already exists
+          for (let i = 0, dbrec; dbrec = list[i]; i++) {
+            if (dbrec.scholarshipcode.toUpperCase() === rec.scholarshipcode.toUpperCase()) {
+              // record found on db:  for adds or if a key field has changed, indicate it's a duplicate
+              if (dbrec.id != rec.id) {// note that the dbrec.id is a string type whereas the rec.id is a number type so the compare cannot be ===
+                errmsg = 'Code "' + dbrec.scholarshipcode + '" is already defined as ' + this.codelistscachesvc.getSelVal('tbl_scholarship', dbrec.scholarshipcode) + '.';
+                break;
+              }
+            }
+          }
+          observer.next(errmsg);
+        },
+        error: (error) => {
+          bnr.close();
+          observer.next(error);
+          observer.complete();
+          return;
+        },
+        complete: () => {
+          bnr.close();
+          observer.complete();
+          return;
+        }
+      });
+    });
   }
 
   flddefsForDialogMode(isAdd: boolean) {
     return this.flddefdatasvc.getFldDefsForDialogMode(isAdd, this.flddefs());
-  }
-
-  // compare method
-  hasChanges(rec: any, origrec: any, flddefs: fldDef[]) {
-    return this.gcsdatasvc.hasChanges(flddefs, rec, origrec);
   }
 
   buildKey(rec: any) {
@@ -159,6 +185,6 @@ export class GcsSchAvailableDataService {
   }
 
   buildDesc(rec: any) {
-    return rec.description;
+    return rec.scholarshipcode + ' - ' + rec.description;
   }
 }

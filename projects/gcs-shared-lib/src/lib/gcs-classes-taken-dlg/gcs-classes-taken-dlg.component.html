@@ -1,0 +1,13 @@
+<h2 mat-dialog-title>Classes Taken</h2>
+
+<mat-dialog-content class="mat-typography" style="max-height: 80vh;" fxLayout="row wrap" fxLayoutGap="16px">
+	<!--
+	+------------------------------------------------------
+	|	Show his/her classes taken
+	+--------------------------------------------------- -->
+	<lib-gcs-classes-taken [student-id]="stuid"></lib-gcs-classes-taken>
+</mat-dialog-content>
+
+<mat-dialog-actions>
+	<button mat-raised-button (click)="close()">Close</button>
+</mat-dialog-actions>

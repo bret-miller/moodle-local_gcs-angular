@@ -2,7 +2,7 @@ import { Component, ViewChild } from '@angular/core';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { MatSort, Sort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
-import { Observable, map, startWith } from 'rxjs';
+import { Observable, map, of, startWith } from 'rxjs';
 import { FormControl } from '@angular/forms';
 
 import { GcsCodeDataService } from 'services/gcs-code-data.service';
@@ -15,6 +15,7 @@ import { GcsDataService } from 'services/gcs-data.service';
 })
 export class AppComponent {
   dblist: any[] = [];// code set for selected codeset
+  iconbtns: any = {};// icon buttons statuses lookup (key is rec.id + icon name).  Set asynchronously as mouse touches a row.
   origRec!: any;// saves values in an edited rec
   disablebuttons: boolean = false;// disables the + button
   reloadandsel: string = '';// upon save, reload codesets and select this one
@@ -23,6 +24,7 @@ export class AppComponent {
   @ViewChild('listSelCtl') listSelCtl: any;
   listSel = {
     show: true,
+    disabled: false,
     fullList: new Array<any>,
     displayList: new Observable<any[]>,// shown in dropdown and dynamically filtered by what is typed in the filter ctl
     selected: '',// default dropdown selection
@@ -38,7 +40,7 @@ export class AppComponent {
     widthpx: '300',// dropdown width
     placeholder: 'Code Set',// dropdown label
   };
-
+          
   // mat properties
   dataSource: MatTableDataSource<any> = new MatTableDataSource(this.dblist);
   @ViewChild(MatSort) sort!: MatSort;// sort control
@@ -53,6 +55,7 @@ export class AppComponent {
 
   // initialization
   ngAfterViewInit() {
+    this.sort.sort({ id: 'code', start: 'asc', disableClear: false });// initialize sort
     this.loadCodesetSel();// load list
   }
 
@@ -77,8 +80,9 @@ export class AppComponent {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -95,12 +99,22 @@ export class AppComponent {
     this.tbldatasvc.getlistbycodeset(this.listSel.selected).subscribe({
       // success
       next: list => {
-        // for the special 'codesets' table, filter on 'tbl_' items, the rest are included
         this.dblist = [];// clear list
+
         // populate the dropdown list
         list.forEach(rec => {
+          // for the special 'codesets' table, filter on 'tbl_' items, the rest are already included
           if (rec.codeset !== 'codesets' || rec.code.indexOf('tbl_') === 0) {
-            this.dblist.push(rec);
+            rec.hasdeps = false;
+            // no need to check for dependencies when record is blank
+            if (rec.code || rec.description) {
+              //// set disabled flags on first few recs
+              //this.dblist.every((rec, i) => {
+              //  this.SetIconsSts(rec);
+              //  return (i < 15); // check the first few for disable status.  They will be checked on a per-record basis anyway.
+              //});
+            }
+            this.dblist.push(rec);// add to list
           }
         });
         this.disablebuttons = false;
@@ -116,8 +130,9 @@ export class AppComponent {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -129,7 +144,6 @@ export class AppComponent {
 
   private refreshList() {
     this.dataSource = new MatTableDataSource(this.dblist);
-    this.sort.sort({ id: 'code', start: 'asc', disableClear: false });// initialize sort
     this.dataSource.sort = this.sort;
     //  this.dataSource.filterPredicate = (data, filter) => {
     //    return (data.rec.description.toLowerCase().includes(filter.toLowerCase()) || data.rec.code.toLowerCase().includes(filter.toLowerCase()));
@@ -197,60 +211,70 @@ export class AppComponent {
     this.disablebuttons = false;
   }
 
-  onSaveClick(rectosave: any) {
-    // (rectosave will be a any upon Save, null for Cancel/ESC)
-    if (rectosave && this.tbldatasvc && this.hasChanges(rectosave)) {
-      // validate
-      if (!this.valRec(rectosave)) {
-        this.gcsdatasvc.showNotification('Please correct the indicated fields.', '', 999);
-        return;
-      }
-
-      const bnr = this.gcsdatasvc.showNotification('Saving...', 'Save');
-      if (rectosave.id > 0) {
-        // drop off unwanted fields, then update record
-        this.tbldatasvc.updrec(this.tbldatasvc.copyRec(rectosave, {}))?.subscribe({
-          // success
-          next: () => {
-          },
-
-          // error
-          error: (error) => {
-            console.error('Error:', error);
-          },
-
-          // complete
-          complete: () => {
-            bnr.close();
+  onSaveClick(rec: any) {
+    // (rec will be any upon Save, null for Cancel/ESC)
+    if (rec && this.hasChanges(rec)) {
+      // complete validation
+      this.valRec(rec).subscribe({
+        next: (errmsg: string) => {
+          if (errmsg) {
+            this.gcsdatasvc.showNotification(errmsg, '', 4000);
+            return;
           }
-        });
-      } else {
-        // add rec
-        rectosave.code = rectosave.code;// Upper case code
-        this.tbldatasvc.addrec(this.tbldatasvc.copyRec(rectosave, {}))?.subscribe({
-          // success
-          next: () => {
-            if (this.reloadandsel) {
-              this.loadCodesetSel();// reload codesets
-              this.listSel.selected = this.reloadandsel;// select codeset in dropdown
-              this.reloadandsel = '';// reset
-            }
-            this.getCodeList();// update list
-          },
 
-          // error
-          error: (error) => {
-            console.error('Error:', error);
-          },
+          const bnr = this.gcsdatasvc.showNotification('Saving...', 'Save');
+          if (rec.id > 0) {
+            // drop off unwanted fields, then update record
+            this.tbldatasvc.updrec(this.tbldatasvc.copyRec(rec, {}))?.subscribe({
+              // success
+              next: () => {
+              },
 
-          // complete
-          complete: () => {
-            bnr.close();
+              // error
+              error: (error: string) => {
+                bnr.close();
+                this.gcsdatasvc.showNotification(error, '');
+              },
+
+              // complete
+              complete: () => {
+                bnr.close();
+              }
+            });
+          } else {
+            // add rec
+            rec.code = rec.code;// Upper case code
+            this.tbldatasvc.addrec(this.tbldatasvc.copyRec(rec, {}))?.subscribe({
+              // success
+              next: () => {
+                if (this.reloadandsel) {
+                  this.loadCodesetSel();// reload codesets
+                  this.listSel.selected = this.reloadandsel;// select codeset in dropdown
+                  this.reloadandsel = '';// reset
+                }
+                this.getCodeList();// update list
+              },
+
+              // error
+              error: (error: string) => {
+                bnr.close();
+                this.gcsdatasvc.showNotification(error, '');
+              },
+
+              // complete
+              complete: () => {
+                bnr.close();
+              }
+            });
           }
-        });
-      }
-      rectosave.isEdit = false;
-      rectosave.isAdd = false;
+          rec.isEdit = false;
+          rec.isAdd = false;
+        },
+
+        error: (error: string) => {
+          alert(error);
+        }
+      });
     }
     this.disablebuttons = false;
   }
@@ -283,8 +307,9 @@ export class AppComponent {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -295,25 +320,50 @@ export class AppComponent {
   }
 
   private confirmAndDelete(rec: any) {
-    if (rec && this.tbldatasvc && confirm('Are you sure you want to delete ' + rec.codeset + '.' + rec.code + ' (' + rec.description + ')?')) {
+    if (rec && this.tbldatasvc && confirm('Are you sure you want to delete "' + rec.codeset + '.' + rec.code + ' (' + rec.description + ')"?')) {
       rec.isEdit = false;
       rec.isAdd = false;
-      const bnr2 = this.gcsdatasvc.showNotification('Deleting...', '');
-      this.tbldatasvc?.delrec(rec)?.subscribe({
+      const bnr = this.gcsdatasvc.showNotification('Deleting...', '');
+      this.tbldatasvc.delrec(rec)?.subscribe({
         // success
         next: () => {
           this.getCodeList();
         },
 
         // error
-        error: (error) => {
-          console.error('Error:', error);
+        error: (error: string) => {
+          bnr.close();
+          this.gcsdatasvc.showNotification(error, '');
         },
 
         // complete
         complete: () => {
-          bnr2.close();
+          bnr.close();
         }
+      });
+    }
+  }
+
+  SetIconsSts(rec: any) {
+    this.SetDelIconSts(rec);// check for dependencies on db
+  }
+
+  private SetDelIconSts(rec: any) {
+    let key = rec.id + 'delete';
+    if (this.iconbtns[key] === undefined) {
+      this.tbldatasvc.getdependencies(rec).subscribe({
+        // success
+        next: (list) => {
+          let o: any = {};
+          o.disabled = (list.length > 0);// set disable flag if has dependencies
+          o.reccnt = null;
+          this.iconbtns[key] = o;// add key to lookup
+        },
+
+        // error
+        error: (error: string) => {
+          this.gcsdatasvc.showNotification(error, '');
+        },
       });
     }
   }

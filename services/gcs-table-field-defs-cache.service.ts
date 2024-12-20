@@ -186,9 +186,9 @@ export class GcsTableFieldDefsCacheService {
   refreshCache() {
     this.flddefsets$.subscribe({
       // error
-      error: (error) => {
-        console.error('Error:', error);
-      }
+      error: (error: string) => {
+        this.gcsdatasvc.showNotification(error, '');
+      },
     });
   }
 

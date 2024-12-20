@@ -24,6 +24,7 @@ export interface MdlReqKeyed {
 export class GcsDataService {
   public sesskey!: string;
   private svccall!: string;
+  private errmsg: string = '';
 
   constructor(
     private dialog: MatDialog,
@@ -47,26 +48,36 @@ export class GcsDataService {
     const post = this.fmtgcspost(func, parms);
     return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {}).pipe(
       map(mdl => {
-        // intercept exception
-        if (this.exceptionHandler(mdl)) {
-          throwError('moodle error');
-        }
+        if (this.exceptionHandler(mdl)) throw new Error(this.errmsg);// throw moodle exceptions
+
         let list: any[] = mdl[0].data;
         list.forEach(rec => {
           this.mdltojs(rec, flddefs);
         });
         return list;
       }),
-      catchError(err => {
-        return throwError(err.message || 'server error.');
-      })
     );
   }
 
+  // queue get list
+  queuegetlist(func: string, parms: any, queue: any[]): any {
+    // add the request info to the queue
+    let req: any = {};
+    req.methodname = 'local_gcs_' + func;
+    req.args = parms;
+    queue.push(req);
+    return req;
+  }
+
   // get multiple lists given a request array
-  getlists(mdlreqs: { index: number, methodname: string, args: any }[]) {
+  getqueuedlists(mdlreqs: { index: number, methodname: string, args: any }[]) {
     const post = this.fmtpostfromreqlist(mdlreqs);
-    return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {});
+    return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {}).pipe(
+      map(mdl => {
+        if (this.exceptionHandler(mdl)) throw new Error(this.errmsg);// throw moodle exceptions
+        return mdl;
+      }),
+    );
   }
 
   // read specific record from server
@@ -74,15 +85,10 @@ export class GcsDataService {
     const post = this.fmtgcspost(func, parms);
     return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {}).pipe(
       map(mdl => {
-        // intercept exception
-        if (this.exceptionHandler(mdl)) {
-          throwError('moodle error');
-        }
+        if (this.exceptionHandler(mdl)) throw new Error(this.errmsg);// throw moodle exceptions
+
         return this.mdltojs(mdl[0].data, flddefs);
       }),
-      catchError(err => {
-        return throwError(err.message || 'server error.');
-      })
     );
   }
 
@@ -104,12 +110,10 @@ export class GcsDataService {
 
     const post = this.fmtgcspost(func, { rec: updrec });
     return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {}).pipe(map(mdl => {
-      // intercept exception
-      if (this.exceptionHandler(mdl)) {
-        return {};
-      }
-      rec = this.mdltojs(mdl[0].data, flddefs);// cvt returned rec to js and update the caller's record
+      if (this.exceptionHandler(mdl)) throw new Error(this.errmsg);// throw moodle exceptions
+
       this.showNotification('Record saved.', 'Save', 999);//one second
+      rec = this.mdltojs(mdl[0].data, flddefs);// cvt returned rec to js and update the caller's record
       return rec;// also return it
     }));
   }
@@ -151,12 +155,17 @@ export class GcsDataService {
     });
     csv = csv.substring(0, csv.length - 1);
 
-    const post= {
+    const post = {
       url: this.svccall + '?info=' + csv + '&sesskey=' + this.sesskey,
       body: JSON.stringify(mdlreqs)
     };
 
-    return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {});
+    return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {}).pipe(
+      map(mdl => {
+        if (this.exceptionHandler(mdl)) throw new Error(this.errmsg);// throw moodle exceptions
+        return mdl;
+      }),
+    );
   }
 
   // add/upd the record on the server and return the resulting record (moodle service func determines whether add or upd)
@@ -166,10 +175,8 @@ export class GcsDataService {
 
   //  const post = this.fmtgcspost(func, { rec: updrec });
   //  return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {}).pipe(map(mdl => {
-  //    // intercept exception
-  //    if (this.exceptionHandler(mdl)) {
-  //      return {};
-  //    }
+  //    if(this.exceptionHandler(mdl)) throw new Error(this.errmsg);// throw moodle exceptions
+  //
   //    rec = this.mdltojs(mdl[0].data, flddefs);// cvt returned rec to js and update the caller's record
   //    this.showNotification('Record saved.', 'Save', 999);//one second
   //    return rec;// also return it
@@ -185,34 +192,35 @@ export class GcsDataService {
     return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {});
   }
 
-  exceptionHandler(mdl: any): boolean {
+  private exceptionHandler(mdl: any): boolean {
     if (!mdl) {
-      alert('Unknown error.');
+      this.errmsg = 'Unknown error.';
       return true;
     }
+
+    this.errmsg = '';// clear
     if (Array.isArray(mdl)) {
       // process array
-      for (let i = 0, rec: mdlServiceResponseRec<any>; rec = mdl[i]; i++) {
-        if (this.checkException(rec)) {
-          return true;
+      mdl.forEach(rec => {
+        let errm = this.checkException(rec);
+        if (errm) {
+          this.errmsg += errm + '\n';
         }
-      }
-    } else if (this.checkException(mdl)) {
-      return true;
+      });
+    } else {
+      // process object
+      this.errmsg = this.checkException(mdl);
     }
-    return false;
+    return (this.errmsg !== '');
   }
 
-  private checkException(mdl: any): boolean {
-    if (typeof mdl.error === 'string') {
-      alert(mdl.error);
-      return true;
-    }
+  private checkException(mdl: any): string {
+    if (typeof mdl.error === 'string') return mdl.error;
+
     if (typeof mdl.error === 'boolean' && mdl.error) {
-      alert(mdl.exception.message + '\n\n' + mdl.exception.debuginfo + '\n\n' + mdl.exception.backtrace);
-      return true;
+      return mdl.exception.message + '\n\n' + mdl.exception.debuginfo + '\n\n' + mdl.exception.backtrace;
     }
-    return false;
+    return '';
   }
 
   // generate the http post components for a moodle service call
@@ -260,19 +268,14 @@ export class GcsDataService {
     const post = this.fmtmdlpost(func, parms);
     return this.http.post<Array<mdlServiceResponseRec<any>>>(post.url, post.body, {}).pipe(
       map(mdl => {
-        // intercept exception
-        if (this.exceptionHandler(mdl)) {
-          return [];
-        }
+        if (this.exceptionHandler(mdl)) throw new Error(this.errmsg);// throw moodle exceptions
+
         const list: any[] = mdl[0].data;
         list.forEach(rec => {
           this.mdltojs(rec, flddefs);
         });
         return list;
       }),
-      catchError(err => {
-        return throwError(err.message || 'server error.');
-      })
     );
   }
 
@@ -320,30 +323,32 @@ public void getUsersByField(String token, String domainName, String functionName
 
   // modify record for js
   mdltojs(rec: any, flddefs: fldDef[]): any {
-    // convert moodle to js
-    flddefs.forEach(flddef => {
-      const fldName = flddef.fieldname;
-      const fldVal = rec[fldName];
+    if (rec) {
+      // convert moodle to js
+      flddefs.forEach(flddef => {
+        const fldName = flddef.fieldname;
+        const fldVal = rec[fldName];
 
-      switch (flddef.datatype) {
-        // convert date fields
-        case 'date':
-          if (fldVal !== 0 && typeof fldVal === 'number') {
-            const date = new Date(fldVal * 1000);
-            rec[fldName] = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());// convert from unix timestamp to javascript date
-          } else {
-            rec[fldName] = null;
-          }
-          break;
+        switch (flddef.datatype) {
+          // convert date fields
+          case 'date':
+            if (fldVal !== 0 && typeof fldVal === 'number') {
+              const date = new Date(fldVal * 1000);
+              rec[fldName] = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());// convert from unix timestamp to javascript date
+            } else {
+              rec[fldName] = null;
+            }
+            break;
 
-        default:
-          // check for html fields
-          if (flddef.ishtml) {
-            rec[fldName] = this.unescapeHtml(fldVal);
-          }
-          break;
-      }
-    });
+          default:
+            // check for html fields
+            if (flddef.ishtml) {
+              rec[fldName] = this.unescapeHtml(fldVal);
+            }
+            break;
+        }
+      });
+    }
     return rec;
   }
 
@@ -370,7 +375,7 @@ public void getUsersByField(String token, String domainName, String functionName
             }
           } else {
             fldVal = 0;
-					}
+          }
           break;
 
         case 'string':
@@ -379,12 +384,15 @@ public void getUsersByField(String token, String domainName, String functionName
             fldVal = flddef.ishtml ? this.escapeHtml(fldVal) : fldVal.toString();
           } else {
             fldVal = '';
-					}
+          }
           break;
 
         case 'double':
-          if (!(typeof fldVal === 'number' && Number.isFinite(fldVal))) {
-            fldVal = 0;
+          if (typeof fldVal !== 'number') {
+            fldVal = Number(fldVal);// convert to number
+            if (isNaN(fldVal)) {
+              fldVal = 0;
+            }
           }
           break;
       }
@@ -443,10 +451,12 @@ public void getUsersByField(String token, String domainName, String functionName
 
   // fill method
   copyRec(flddefs: fldDef[], irec: any, orec: any) {
-    // using caller's fldDef array, copy the values from the input record to the output record
-    flddefs.forEach(flddef => {
-      orec[flddef.fieldname] = irec[flddef.fieldname];// copy the value
-    });
+    if (flddefs && irec && orec) {
+      // using caller's fldDef array, copy the values from the input record to the output record
+      flddefs.forEach(flddef => {
+        orec[flddef.fieldname] = irec[flddef.fieldname];// copy the value
+      });
+    }
     return orec;
   }
 
@@ -457,19 +467,7 @@ public void getUsersByField(String token, String domainName, String functionName
     let chg = false;
     // using our fldDef array, compare each value (all must be checked because we track each field to show the user what has changed)
     for (const flddef of flddefs) {
-      if (flddef.datatype === 'date') {
-        const origDate = origrec[flddef.fieldname];
-        const newDate = rec[flddef.fieldname];
-
-        if (origDate instanceof Date && newDate instanceof Date) {
-          flddef.haschanges = origDate.getTime() !== newDate.getTime();
-        } else {
-          flddef.haschanges = origDate !== newDate;
-        }
-      } else {
-        flddef.haschanges = origrec[flddef.fieldname] !== rec[flddef.fieldname];
-      }
-
+      flddef.haschanges = this.hasChange(rec, origrec, flddef);
       if (flddef.haschanges) {
         chg = true;// function return value
       }
@@ -477,11 +475,28 @@ public void getUsersByField(String token, String domainName, String functionName
     return chg;;
   }
 
-  // validate from flddefs directives
-  valRec(flddefs: fldDef[], codelistsdatasvc: any, rec: any): boolean {
-    if (!flddefs || !rec) return false;
+  // Check if the field has changed
+  hasChange(rec: any, origrec: any, flddef: fldDef): boolean {
+    if (flddef.datatype === 'date') {
+      const origDate = origrec[flddef.fieldname];
+      const newDate = rec[flddef.fieldname];
 
-    for (const flddef of flddefs) {
+      if (origDate instanceof Date && newDate instanceof Date) {
+        return origDate.getTime() !== newDate.getTime();
+      }
+      return origDate !== newDate;
+    }
+
+    return origrec[flddef.fieldname] !== rec[flddef.fieldname];
+  }
+
+  // validate from flddefs directives
+  stdValRec(flddefs: fldDef[], codelistscachesvc: any, rec: any): string {
+    if (!flddefs || !rec) return '';
+    const retmsg = 'Please correct the indicated fields.';
+    let errmsg = '';
+
+    flddefs.forEach(flddef => {
       flddef.errmsg = ''; // Clear any previous error messages
 
       // Validate required fields
@@ -489,18 +504,18 @@ public void getUsersByField(String token, String domainName, String functionName
         const value = rec[flddef.fieldname];
         if (!value) {
           flddef.errmsg = 'Required';
-          return false; // Return early if a required field is missing
+          errmsg = retmsg; // Indicate error to caller
         }
 
         // Validate dropdown list values
-        if (flddef.sellistid && !codelistsdatasvc.getSelVal(flddef.sellistid, value)) {
+        if (flddef.sellistid && !codelistscachesvc.getSelVal(flddef.sellistid, value)) {
           flddef.errmsg = 'Invalid value';
-          return false; // Return early if an invalid value is found
+          errmsg = retmsg; // Indicate error to caller
         }
       }
-    }
+    });
 
-    return true; // All validations passed
+    return errmsg;
   }
 
   /*
@@ -508,7 +523,7 @@ public void getUsersByField(String token, String domainName, String functionName
   | general utilities
   +------------------------------*/
   // For each select col, Sort and filter on description, not code
-  setSelSortFilt(dataSource: MatTableDataSource<any>, flddefs: fldDef[], codelistsdatasvc: any) {
+  setSelSortFilt(dataSource: MatTableDataSource<any>, flddefs: fldDef[], codelistscachesvc: any) {
     // pre-select listed columns
     const cols = flddefs.filter(col => col.islist);
 
@@ -518,7 +533,7 @@ public void getUsersByField(String token, String domainName, String functionName
       for (const col of cols) {
         if (col.fieldname === property) {
           if (col.datatype === 'dropdown') {
-            return codelistsdatasvc.getSelVal(col.addsellistid || col.updsellistid, item[property])
+            return codelistscachesvc.getSelVal(col.addsellistid || col.updsellistid, item[property])
           }
           return item[property]
         }
@@ -530,7 +545,7 @@ public void getUsersByField(String token, String domainName, String functionName
       let concat = '';
       for (const col of cols) {
         if (col.datatype === 'dropdown') {
-          concat += codelistsdatasvc.getSelVal(col.addsellistid || col.updsellistid, item[col.fieldname]) + ' ';
+          concat += codelistscachesvc.getSelVal(col.addsellistid || col.updsellistid, item[col.fieldname]) + ' ';
         } else {
           concat += item[col.fieldname] + ' ';
         }

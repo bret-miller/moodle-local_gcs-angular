@@ -6,8 +6,9 @@ import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialog } from '@angular/material/dialog'
 import { GcsClassesDataService } from 'services/gcs-classes-data.service';
 import { GcsDataService } from 'services/gcs-data.service';
 import { FormControl } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, map, of } from 'rxjs';
 import { GcsCodelistsDataService } from 'services/gcs-codelists-data.service';
+import { GcsCodelistsCacheService } from 'services/gcs-codelists-cache.service';
 import { GcsStandardAddUpdRecDlgComponent } from 'projects/gcs-shared-lib/src/lib/gcs-standard-add-upd-rec-dlg/gcs-standard-add-upd-rec-dlg.component';
 import { fldDef } from 'services/gcs-table-field-defs-cache.service';
 
@@ -21,6 +22,7 @@ import { fldDef } from 'services/gcs-table-field-defs-cache.service';
 })
 export class AppComponent {
   dblist: any[] = [];// list of records from moodle
+  iconbtns: any = {};// icon buttons statuses lookup (key is rec.id + icon name).  Set asynchronously as mouse touches a row.
   origRec!: any;// pointer to the selected record in the list so it can be individually refreshed after save
   addmode: boolean = false;// add mode flag
   listFilterVal: string = '';// search list
@@ -28,6 +30,7 @@ export class AppComponent {
   // dropdown properties (set listSel.show=false if you don't want a dropdown)
   listSel = {
     show: false,
+    disabled: false,
     fullList: new Array<any>,
     displayList: new Observable<any[]>,// shown in dropdown and dynamically filtered by what is typed in the filter ctl
     selected: '',// default dropdown selection
@@ -44,6 +47,17 @@ export class AppComponent {
     placeholder: '',// dropdown label
   };
 
+  // button column buttons
+  btnlist = [
+    {
+      icon: 'delete',
+      color: 'warn',
+      click: (rec: any) => this.onDelClick(rec),
+      mouseenter: (rec: any) => this.SetDelIconSts(rec),
+      tooltip: 'Delete this record!'
+    },
+  ];
+
   // mat properties
   dataSource: MatTableDataSource<any> = new MatTableDataSource(this.dblist);
   @ViewChild(MatSort) sort!: MatSort;// sort control
@@ -53,6 +67,7 @@ export class AppComponent {
     private dialog: MatDialog,
     public tbldatasvc: GcsClassesDataService,
     public codelistsdatasvc: GcsCodelistsDataService,
+    public codelistscachesvc: GcsCodelistsCacheService,
   ) {
   }
 
@@ -67,8 +82,9 @@ export class AppComponent {
       },
 
       // error
-      error: (error: any) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -81,7 +97,7 @@ export class AppComponent {
   // refresh ui list
   getFullList() {
     const bnr = this.gcsdatasvc.showNotification('Loading...', 'Hourglass Top');
-    this.tbldatasvc.getlist()?.subscribe({
+    this.tbldatasvc.getlist().subscribe({
       // success
       next: list => {
         // because we want to sort by more than one column, we have to do it here
@@ -94,21 +110,72 @@ export class AppComponent {
           if (t1.coursecode < t2.coursecode) { return -1; }
           return 0;
         });
+
+        // GG - BULK SERVER PROCESSING WAS GETTING TO COMPLICATED FOR MARGINAL BENEFIT
+        //// if there are too many dependencies to check, we will assume there are none.  Dependencies will be checked on a per-record basis.
+        //if (list.length > 30) {
+        //  this.dblist.forEach(rec => {
+        //    rec.hasdeps = false;
+        //  });
+        //} else {
+        //  // queue db requests to check for dependencies
+        //  let mdlreqs: any[] = [];// queue for dependencies db lookups
+        //  let reqrecs: any[] = [];// parallel queue for processing results
+        //  list.forEach(rec => {
+        //    // set the hasdeps flag to true by default
+        //    rec.hasdeps = true;// default to true
+        //    // queue the dependency check
+        //    let req = this.tbldatasvc.queuegetdependencies(rec, mdlreqs);
+        //    reqrecs.push(rec);// save the record for when the db results are processed and we can set the hasdeps flag
+        //  });
+
+        //  // check for dependencies on db
+        //  this.gcsdatasvc.getqueuedlists(mdlreqs).subscribe({
+        //    // success
+        //    next: (mdlarray) => {
+        //      let ret = true;// assume success
+        //      ret = (!this.gcsdatasvc.exceptionHandler(mdlarray) && Array.isArray(mdlarray));
+        //      if (ret) {
+        //        // process each returned list
+        //        mdlarray.every((mdl, i) => {
+        //          ret = !this.gcsdatasvc.exceptionHandler(mdl);
+        //          if (ret) {
+        //            reqrecs[i].hasdeps = (mdl.data.length > 0);// set the hasdeps flag used in the template to disable the delete button
+        //          }
+        //          return ret;// stop if error
+        //        });
+        //      }
+        //      return ret;
+        //    },
+
+        //    // error
+        //    error: (error) => {
+        //      console.error('Error:', error);
+        //    }
+        //  });
+        //}
         this.dblist = list;
+
+        //// set disabled flags on first few recs
+        //this.dblist.every((rec, i) => {
+        //  this.SetIconsSts(rec);
+        //  return (i < 15); // check the first few for disable status.  They will be checked on a per-record basis anyway.
+        //});
 
         // since the data is returned async, also init the material datasource in this function.
         this.dataSource = new MatTableDataSource(this.dblist);
 
         // sort & filter on the expanded description for columns defined with descriptions
-        this.gcsdatasvc.setSelSortFilt(this.dataSource, this.tbldatasvc.flddefs(), this.codelistsdatasvc);
+        this.gcsdatasvc.setSelSortFilt(this.dataSource, this.tbldatasvc.flddefs(), this.codelistscachesvc);
 
         this.dataSource.sort = this.sort;
         this.applyListFilter(this.listFilterVal);
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -138,17 +205,41 @@ export class AppComponent {
     this.openDialog(this.origRec);// new empty rec for dialog
   }
 
+  SetIconsSts(rec: any) {
+    this.SetDelIconSts(rec);// check for dependencies on db
+  }
+
+  private SetDelIconSts(rec: any) {
+    let key = rec.id + 'delete';
+    if (this.iconbtns[key] === undefined) {
+      this.tbldatasvc.getdependencies(rec).subscribe({
+        // success
+        next: (list) => {
+          let o: any = {};
+          o.disabled = (list.length > 0);// set disable flag if has dependencies
+          o.reccnt = list.length;
+          this.iconbtns[key] = o;// add key to lookup
+        },
+
+        // error
+        error: (error: string) => {
+          this.gcsdatasvc.showNotification(error, '');
+        },
+      });
+    }
+  }
+
   // click del, pop up delete confirm
   onDelClick(rec: any) {
-    const bnr = this.gcsdatasvc.showNotification('Checking for dependencies...', '');
-
+    let bnr = this.gcsdatasvc.showNotification('Checking for dependencies...', '');
     this.tbldatasvc.getdependencies(rec).subscribe({
       // success
       next: (dependencies) => {
+        bnr.close();
         if (dependencies.length > 0) {
           this.gcsdatasvc.showNotification('This record cannot be deleted because it is used in another table.', '', 5000);
-        } else if (confirm('Are you sure you want to delete ' + this.tbldatasvc.buildKey(rec) + '?')) {
-          const bnr2 = this.gcsdatasvc.showNotification('Deleting...', '');
+        } else if (confirm('Are you sure you want to delete "' + rec.termyear + '-' + this.codelistscachesvc.getSelVal('codeset_term', rec.termcode) + '-' + rec.coursecode + '"?')) {
+          bnr = this.gcsdatasvc.showNotification('Deleting...', '');
           this.tbldatasvc.delrec(rec)?.subscribe({
             // success
             next: () => {
@@ -156,21 +247,23 @@ export class AppComponent {
             },
 
             // error
-            error: (error) => {
-              console.error('Error:', error);
+            error: (error: string) => {
+              bnr.close();
+              this.gcsdatasvc.showNotification(error, '');
             },
 
             // complete
             complete: () => {
-              bnr2.close();
+              bnr.close();
             }
           });
         }
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -182,7 +275,7 @@ export class AppComponent {
 
   // open the Add/Update dialog
   openDialog(rec: any) {
-    let cfg = this.codelistsdatasvc.getDlgCfg(this.tbldatasvc.tableid);// get the dialog properties for this table
+    let cfg = this.codelistscachesvc.getDlgCfg(this.tbldatasvc.tableid);// get the dialog properties for this table
     let dialogRef = this.dialog.open(GcsStandardAddUpdRecDlgComponent, {
       autoFocus: true,
       width: cfg.dlg.width,
@@ -196,13 +289,13 @@ export class AppComponent {
 
     // post-close processing
     dialogRef.afterClosed().subscribe(result => {
+      this.addmode = false;
       if (result.errmsg) {
         alert(result.errmsg);
       } else if (result.isAdd) {
         this.getFullList();// for an add, refresh list to show new record
-        this.addmode = false;
       } else {
-        this.tbldatasvc.copyRec(result.rec, this.origRec);// for update, refresh the ui list
+        this.tbldatasvc.copyRec(result.rec, this.origRec);// for update, refresh the ui list record with the record passed back from the dialog
       }
     });
   }

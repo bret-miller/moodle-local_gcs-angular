@@ -25,6 +25,7 @@ export class AppComponent {
   // dropdown properties (set listSel.show=false if you don't want a dropdown)
   listSel = {
     show: true,// create in DOM
+    disabled: false,
     fullList: new Array<any>,
     displayList: new Observable<any[]>,// shown in dropdown and dynamically filtered by what is typed in the filter ctl
     selected: '',// default dropdown selection
@@ -90,8 +91,9 @@ export class AppComponent {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        bnr.close();
+        this.gcsdatasvc.showNotification(error, '');
       },
 
       // complete
@@ -130,16 +132,16 @@ export class AppComponent {
             },
 
             // error
-            error: (error) => {
-              console.error('Error:', error);
+            error: (error: string) => {
+              this.gcsdatasvc.showNotification(error, '');
             },
           });
         }
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
+      error: (error: string) => {
+        this.gcsdatasvc.showNotification(error, '');
       },
     });
   }

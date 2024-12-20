@@ -1,5 +1,5 @@
 /*
-Use this component to display the enrollment agreement for the user to read and sign.  The dialogData.ctrec is the record that will be modified by the user's signature.
+Use this component to display the enrollment agreement for the user to read and sign.
 The dialogData.ctrec will be updated with the user's signature and the dialogData.ctrec will be returned to the caller when the dialog is closed.
 
 e.g. this is how the dialog is called from the caller:
@@ -16,8 +16,6 @@ dialogRef.afterClosed().subscribe((result: any) => {
 
 import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { GcsSettingsService } from 'services/gcs-settings.service';
-
 @Component({
   selector: 'lib-gcs-enroll-agreement-dialog',
   templateUrl: './gcs-enroll-agreement-dialog.component.html',
@@ -30,7 +28,6 @@ export class GcsEnrollAgreementDialogComponent {
   constructor(
     public dialogRef: MatDialogRef<any>,
     @Inject(MAT_DIALOG_DATA) public dialogData: any,
-    public settingsdatasvc: GcsSettingsService,
   ) {
     // one-record list needed by the template component (gcs-enroll-agreement-sign).  It can modify this record and the changes will be reflected in the dialogData.ctrec.
     this.ctlist.push(dialogData.ctrec);

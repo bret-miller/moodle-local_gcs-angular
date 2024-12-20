@@ -1,29 +1,31 @@
 import { Injectable } from '@angular/core';
 
 import { GcsDataService } from 'services/gcs-data.service';
-import { GcsCodelistsDataService } from './gcs-codelists-data.service';
+import { GcsCodelistsCacheService } from './gcs-codelists-cache.service';
 import { GcsTableFieldDefService } from './gcs-table-field-def.service';
 import { GcsTableFieldDefsCacheService, fldDef } from './gcs-table-field-defs-cache.service';
+import { GcsCoursesDataService } from './gcs-courses-data.service';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GcsClassesDataService {
-//  // OLD SCHEME (used only to populate the new field def table)
-//  coldefstr = `
-//id int   //Identity Key|nolist|show=hide
-//termyear int //Term Year|val(required)|upd(show=readonly)|width=100px
-//termcode string //Term|val(required)|upd(show=readonly)|width=120px|sel(codeset,term)
-//coursecode string   //Course Code|val(required)|upd(show=readonly)|sel(tbl,course)|width=300px
-//shorttitle string   //Short Title|val(required)|width=320px|newline
-//title string   //Long Title|val(required)|nolist|width=520px
-//description string   //Description|nolist|width=520px|text
-//coursehours int   //Course Hours|val(required)|nolist|width=120px|newline
-//lectures int   //Lectures|val(required)|nolist|width=100px
-//instructor int   //Instructor|sel(tbl,instructor)|width=300px
-//requiredtextbooks string   //Required Textbooks|nolist|width=520px|text|newline
-//comments string   //Comments|nolist|width=520px|text|newline
-//`;
+  //  // OLD SCHEME (used only to populate the new field def table)
+  //  coldefstr = `
+  //id int   //Identity Key|nolist|show=hide
+  //termyear int //Term Year|val(required)|upd(show=readonly)|width=100px
+  //termcode string //Term|val(required)|upd(show=readonly)|width=120px|sel(codeset,term)
+  //coursecode string   //Course Code|val(required)|upd(show=readonly)|sel(tbl,course)|width=300px
+  //shorttitle string   //Short Title|val(required)|width=320px|newline
+  //title string   //Long Title|val(required)|nolist|width=520px
+  //description string   //Description|nolist|width=520px|text
+  //coursehours int   //Course Hours|val(required)|nolist|width=120px|newline
+  //lectures int   //Lectures|val(required)|nolist|width=100px
+  //instructor int   //Instructor|sel(tbl,instructor)|width=300px
+  //requiredtextbooks string   //Required Textbooks|nolist|width=520px|text|newline
+  //comments string   //Comments|nolist|width=520px|text|newline
+  //`;
 
   tableid = 'class';// define our table id
   private addtlcols: fldDef[] = [];// additional columns
@@ -37,7 +39,8 @@ export class GcsClassesDataService {
     private gcsdatasvc: GcsDataService,
     private flddefscachedatasvc: GcsTableFieldDefsCacheService,
     public flddefdatasvc: GcsTableFieldDefService,
-    public codelistsdatasvc: GcsCodelistsDataService
+    public codelistscachesvc: GcsCodelistsCacheService,
+    public coursedatasvc: GcsCoursesDataService
   ) {
     // assure the master field definitions array has been initialized
     this.flddefscachedatasvc.flddefsets$.subscribe({
@@ -56,9 +59,9 @@ export class GcsClassesDataService {
       },
 
       // error
-      error: (error) => {
-        console.error('Error:', error);
-      }
+      error: (error: string) => {
+        this.gcsdatasvc.showNotification(error, '');
+      },
     });
   }
 
@@ -70,6 +73,11 @@ export class GcsClassesDataService {
   // get entire list
   getlist() {
     return this.gcsdatasvc.getlist('classes_get', {}, this.flddefs());
+  }
+
+  // get a req object to be used later to get the list
+  buildcodelistreq(i: number, x: any) {
+    return this.gcsdatasvc.fmtgcsreq(i, 'classes_get', {});
   }
 
   // read specific record from server
@@ -99,7 +107,12 @@ export class GcsClassesDataService {
 
   // get list of table record dependencies
   getdependencies(rec: any) {
-    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: 'class', keycsv: rec.termyear + ',' + rec.termcode + ',' + rec.coursecode }, this.flddefs());
+    return this.gcsdatasvc.getlist('table_record_dependencies', { tablecode: this.tableid, keycsv: rec.termyear + ',' + rec.termcode + ',' + rec.coursecode }, this.flddefs());
+  }
+
+  // queue request to get list of table record dependencies
+  queuegetdependencies(rec: any, queue: any[]) {
+    return this.gcsdatasvc.queuegetlist('table_record_dependencies', { tablecode: this.tableid, keycsv: rec.termyear + ',' + rec.termcode + ',' + rec.coursecode }, queue);
   }
 
   /*
@@ -128,14 +141,14 @@ export class GcsClassesDataService {
     return a;
   }
 
-  onValChanged(rec: any, colkey: string) {
+  onValChanged(rec: any, fld: fldDef) {
     // init record from the course record for empty fields
-    if (colkey === 'coursecode') {
+    if (fld.fieldname === 'coursecode') {
       // let them know we're filling in some fields
       let bnr = this.gcsdatasvc.showNotification('Filling in some fields from the course record.', '');
 
       // subscribe to the course record
-      this.codelistsdatasvc.crsdatasvc.getrecbycode(rec.coursecode).subscribe((crsrec: any) => {
+      this.coursedatasvc.getrecbycode(rec.coursecode).subscribe((crsrec: any) => {
         bnr.close();
         if (crsrec) {
           // fill in the fields
@@ -147,31 +160,52 @@ export class GcsClassesDataService {
           if (!rec.instructor) rec.instructor = parseInt(crsrec.defaultinstructor);
           if (!rec.requiredtextbooks) rec.requiredtextbooks = crsrec.requiredtextbooks;
 
-          this.valRec(rec, this.flddefs());
+          this.valRec(rec, this.flddefs()).subscribe();
         }
       });
     }
   }
 
   valRec(rec: any, flddefs: fldDef[]) {
-    // note that we want to use the flddefs from the dialog, not the service's flddefs
-    let isvalid = this.gcsdatasvc.valRec(flddefs, this.codelistsdatasvc, rec);
-    //if (isvalid) {
-    // custom validation
-    //if (rec.termyear < 2000) {
-    //  alert('Invalid Term Year');
-    //  return false;
-    //}
-    return isvalid;
+    return new Observable<string>((observer) => {
+      // For standard errors or updates, just pass back the validation results (note that we want to use the flddefs from the dialog, not the service's flddefs)
+      let errmsg = this.gcsdatasvc.stdValRec(flddefs, this.codelistscachesvc, rec);
+      if (errmsg) {
+        observer.next(errmsg);
+        observer.complete();
+        return;
+      }
+
+      // Read for possible duplicate record
+      const bnr = this.gcsdatasvc.showNotification('checking for duplicate...', 'save');
+      this.getrecbycoursecodeterm(rec.coursecode, rec.termyear, rec.termcode).subscribe({
+        // returns a record or null
+        next: (dbrec) => {
+          // for adds or if a key field has changed, indicate a duplicate record was found
+          if (dbrec && dbrec.id != rec.id) {// note that the dbrec.id is a string type whereas the rec.id is a number type so the compare cannot be ===
+            // record already exists
+            errmsg = '"' + this.codelistscachesvc.getSelVal('tbl_course', dbrec.coursecode) +
+              '" is already defined for ' + rec.termyear + '-' + this.codelistscachesvc.getSelVal('codeset_term', dbrec.termcode) + '.';
+          }
+          observer.next(errmsg);
+        },
+        error: (error) => {
+          bnr.close();
+          observer.next(error);
+          observer.complete();
+          return;
+        },
+        complete: () => {
+          bnr.close();
+          observer.complete();
+          return;
+        }
+      });
+    });
   }
 
   flddefsForDialogMode(isAdd: boolean) {
     return this.flddefdatasvc.getFldDefsForDialogMode(isAdd, this.flddefs());
-  }
-
-  // compare method
-  hasChanges(rec: any, origrec: any, flddefs: fldDef[]) {
-    return this.gcsdatasvc.hasChanges(flddefs, rec, origrec);
   }
 
   // Allow caller to add columns to flddefs (non-field columns like a buttons column--It does NOT add it to the flds object).
@@ -181,7 +215,7 @@ export class GcsClassesDataService {
   //}
 
   buildKey(rec: any) {
-    return rec.termyear + '-' + this.codelistsdatasvc.getSelVal('codeset_term', rec.termcode) + '-' + rec.coursecode;
+    return rec.termyear + '-' + rec.termcode + '-' + rec.coursecode;
   }
 
   buildDesc(rec: any) {
